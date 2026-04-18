@@ -1,4 +1,4 @@
-[
+{
   "name": "patr0n Nuvio Eklentileri",
   "version": "1.0",
   "scrapers": [
@@ -8,24 +8,15 @@
       "description": "AsyaAnimeleri.top üzerinden Türkçe dublajlı ve altyazılı Asya animeleri. @patr0n tarafından geliştirildi.",
       "version": "1.0.0",
       "author": "patr0n",
-      "supportedTypes": [
-        "tv",
-        "movie"
-      ],
-      "filename": "https://raw.githubusercontent.com/patr0nq/nuvioaddons/main/providers/patronAsyaAnimeleri.js",
+      "supportedTypes": ["tv", "movie"],
+      "filename": "providers/patronAsyaAnimeleri.js",
       "enabled": true,
       "logo": "",
-      "contentLanguage": [
-        "tr",
-        "ja"
-      ],
-      "formats": [
-        "mp4",
-        "m3u8"
-      ],
+      "contentLanguage": ["tr", "ja"],
+      "formats": ["mp4", "m3u8"],
       "limited": false,
       "disabledPlatforms": [],
       "supportsExternalPlayer": true
     }
   ]
-]
+}
