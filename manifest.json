@@ -30,12 +30,35 @@
       "id": "patron-film-makinesi",
       "name": "PatronFilmMakinesi",
       "description": "FilmMakinesi.to üzerinden Türkçe dublajlı ve altyazılı filmler. @patr0n tarafından geliştirildi.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": "patr0n",
       "supportedTypes": [
         "movie"
       ],
       "filename": "providers/patronFilmMakinesi.js",
+      "enabled": true,
+      "logo": "",
+      "contentLanguage": [
+        "tr"
+      ],
+      "formats": [
+        "mp4",
+        "m3u8"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-dizi-box",
+      "name": "PatronDiziBox",
+      "description": "DiziBox.live üzerinden Türkçe dublajlı ve altyazılı yabancı diziler. @patr0n tarafından geliştirildi.",
+      "version": "1.0.0",
+      "author": "patr0n",
+      "supportedTypes": [
+        "tv"
+      ],
+      "filename": "providers/patronDiziBox.js",
       "enabled": true,
       "logo": "",
       "contentLanguage": [
