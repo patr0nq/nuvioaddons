@@ -1,6 +1,6 @@
 /**
  * patronasyaAnimeleri - Built from src/patronasyaAnimeleri/
- * Generated: 2026-04-18T21:56:40.239Z
+ * Generated: 2026-04-18T22:07:20.143Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -254,7 +254,10 @@ function searchAnime(query) {
     if (results.length === 0)
       return null;
     const queryLower = query.toLowerCase();
-    const exact = results.find((r) => r.title.toLowerCase().includes(queryLower));
+    let exact = results.find((r) => r.title.toLowerCase() === queryLower);
+    if (!exact) {
+      exact = results.find((r) => r.title.toLowerCase().includes(queryLower));
+    }
     return exact ? exact.href : results[0].href;
   });
 }
@@ -411,11 +414,24 @@ function extractStreams(tmdbId, mediaType, season, episode) {
       return [];
     }
     let animeUrl = null;
-    if (trTitle) {
-      animeUrl = yield searchAnime(trTitle);
+    let queryTr = trTitle;
+    let queryOrig = origTitle;
+    if (mediaType === "tv" && season > 1) {
+      queryTr = `${trTitle} ${season}`;
+      queryOrig = `${origTitle} ${season}`;
     }
-    if (!animeUrl && origTitle && origTitle !== trTitle) {
-      animeUrl = yield searchAnime(origTitle);
+    if (queryTr) {
+      animeUrl = yield searchAnime(queryTr);
+    }
+    if (!animeUrl && queryOrig && queryOrig !== queryTr) {
+      animeUrl = yield searchAnime(queryOrig);
+    }
+    if (!animeUrl && mediaType === "tv" && season > 1) {
+      console.log(`[PatronAsyaAnimeleri] Sezonlu arama ba\u015Far\u0131s\u0131z, sezonsuz deneniyor...`);
+      if (trTitle)
+        animeUrl = yield searchAnime(trTitle);
+      if (!animeUrl && origTitle)
+        animeUrl = yield searchAnime(origTitle);
     }
     if (!animeUrl) {
       console.warn(`[PatronAsyaAnimeleri] Site'de i\xE7erik bulunamad\u0131: ${trTitle || origTitle}`);
