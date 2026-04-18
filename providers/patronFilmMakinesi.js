@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-04-18T22:55:15.660Z
+ * Generated: 2026-04-18T22:57:08.359Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -78,9 +78,8 @@ module.exports = __toCommonJS(patronFilmMakinesi_exports);
 var cheerio = __toESM(require("cheerio-without-node-native"));
 var MAIN_URL = "https://filmmakinesi.to";
 var HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
 };
 function fetchText(_0) {
   return __async(this, arguments, function* (url, options = {}) {
@@ -384,12 +383,12 @@ function extractSibnet(url) {
 }
 
 // src/patronFilmMakinesi/extractor.js
-var cheerio3 = __toESM(require("cheerio-without-node-native"));
+var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
 function searchMovie(query) {
   return __async(this, null, function* () {
     const searchUrl = `${MAIN_URL}/arama/?s=${encodeURIComponent(query)}`;
     const html = yield fetchText(searchUrl);
-    const $ = cheerio3.load(html);
+    const $ = import_cheerio_without_node_native.default.load(html);
     const results = [];
     $("div.item-relative").each((i, el) => {
       const anchor = $(el).find("a").first();
@@ -416,7 +415,7 @@ function searchMovie(query) {
 function extractFromMoviePage(movieUrl) {
   return __async(this, null, function* () {
     const html = yield fetchText(movieUrl);
-    const $ = cheerio3.load(html);
+    const $ = import_cheerio_without_node_native.default.load(html);
     const streams = [];
     const linkUrls = [];
     const iframeSrc = $("iframe").attr("data-src") || $("iframe").attr("src");
