@@ -1,10 +1,12 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-04-18T22:31:18.468Z
+ * Generated: 2026-04-18T22:39:10.879Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __getProtoOf = Object.getPrototypeOf;
@@ -22,6 +24,7 @@ var __spreadValues = (a, b) => {
     }
   return a;
 };
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -206,13 +209,175 @@ function extractCloseLoad(url, referer) {
   });
 }
 
-// src/patronFilmMakinesi/extractor.js
+// src/patronasyaAnimeleri/extractors/vidmoly.js
 var cheerio2 = __toESM(require("cheerio-without-node-native"));
+
+// src/patronasyaAnimeleri/http.js
+var MAIN_URL2 = "https://asyaanimeleri.top";
+var HEADERS2 = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Referer": MAIN_URL2 + "/"
+};
+
+// src/patronasyaAnimeleri/extractors/vidmoly.js
+function unpackJS2(code) {
+  try {
+    const match = code.match(/}\('([^']*)',(\d+),(\d+),'([^']*)'\.split\('\|'\)/);
+    if (!match)
+      return code;
+    let p = match[1];
+    const a = parseInt(match[2], 10);
+    const c = parseInt(match[3], 10);
+    const k = match[4].split("|");
+    const e = (c2) => {
+      return (c2 < a ? "" : e(parseInt(c2 / a, 10))) + (c2 % a > 35 ? String.fromCharCode(c2 % a + 29) : (c2 % a).toString(36));
+    };
+    let map = {};
+    for (let i = 0; i < c; i++) {
+      map[e(i)] = k[i];
+    }
+    const dictRegex = new RegExp("\\b(" + Object.keys(map).filter((key) => key).join("|") + ")\\b", "g");
+    const unpacked = p.replace(dictRegex, function(match2) {
+      return map[match2] || match2;
+    });
+    return unpacked;
+  } catch (err) {
+    return code;
+  }
+}
+function extractVidMoly(url, referer) {
+  return __async(this, null, function* () {
+    try {
+      let fetchUrl = url;
+      fetchUrl = fetchUrl.replace(/https?:\/\/vidmoly\.[a-z]+/, "https://vidmoly.me");
+      fetchUrl = fetchUrl.replace(/\/embed-([a-z0-9]+)\.html/, "/w/$1");
+      let headers = {
+        "User-Agent": HEADERS2["User-Agent"],
+        "Sec-Fetch-Dest": "iframe"
+      };
+      if (referer)
+        headers["Referer"] = referer;
+      let response = yield fetch(fetchUrl, { headers });
+      let html = yield response.text();
+      if (html.toLowerCase().includes("video not found") || html.toLowerCase().includes("file was deleted")) {
+        return null;
+      }
+      if (html.includes("Select number") || html.toLowerCase().includes("select the number")) {
+        const $ = cheerio2.load(html);
+        const opVal = $("input[name='op']").val();
+        const fileCodeVal = $("input[name='file_code']").val();
+        let answerVal = $("div.vhint b").text() || $("span.vhint b").text();
+        if (!answerVal) {
+          const ansMatch = html.match(/Please select (\d+)/i);
+          if (ansMatch)
+            answerVal = ansMatch[1];
+        }
+        const tsVal = $("input[name='ts']").val();
+        const nonceVal = $("input[name='nonce']").val();
+        const ctokVal = $("input[name='ctok']").val();
+        if (opVal && fileCodeVal && answerVal) {
+          const formData = new URLSearchParams();
+          formData.append("op", opVal);
+          formData.append("file_code", fileCodeVal);
+          formData.append("answer", answerVal);
+          formData.append("ts", tsVal);
+          formData.append("nonce", nonceVal);
+          formData.append("ctok", ctokVal);
+          let postResponse = yield fetch(fetchUrl, {
+            method: "POST",
+            headers: __spreadProps(__spreadValues({}, headers), { "Content-Type": "application/x-www-form-urlencoded" }),
+            body: formData.toString()
+          });
+          html = yield postResponse.text();
+        }
+      }
+      let videoUrl = null;
+      const scriptMatches = html.match(/eval\(function\(p,a,c,k,e,?[d]?\).*?\)\)/g);
+      if (scriptMatches) {
+        for (let script of scriptMatches) {
+          const unpacked = unpackJS2(script);
+          const vidMatch = unpacked.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || unpacked.match(/file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
+          if (vidMatch) {
+            videoUrl = vidMatch[1];
+            break;
+          }
+        }
+      }
+      if (!videoUrl) {
+        const vidMatch = html.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || html.match(/file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
+        if (vidMatch) {
+          videoUrl = vidMatch[1];
+        }
+      }
+      if (videoUrl) {
+        return {
+          url: videoUrl,
+          headers: { "Referer": "https://vidmoly.me/" }
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error("[VidMoly] Error extracting:", err.message);
+      return null;
+    }
+  });
+}
+
+// src/patronasyaAnimeleri/extractors/sibnet.js
+function extractSibnet(url) {
+  return __async(this, null, function* () {
+    try {
+      const fetchUrl = url;
+      const response = yield fetch(fetchUrl, {
+        headers: {
+          "User-Agent": HEADERS2["User-Agent"],
+          "Referer": "https://video.sibnet.ru/"
+        }
+      });
+      const html = yield response.text();
+      const match = html.match(/src\s*:\s*["'](\/v\/[^"']+)["']/);
+      if (match) {
+        let videoUrl = "https://video.sibnet.ru" + match[1];
+        try {
+          const redirectRes = yield fetch(videoUrl, {
+            method: "GET",
+            redirect: "manual",
+            headers: {
+              "User-Agent": HEADERS2["User-Agent"],
+              "Referer": url
+            }
+          });
+          let finalUrl = redirectRes.headers.get("location");
+          if (finalUrl) {
+            if (finalUrl.startsWith("//"))
+              finalUrl = "https:" + finalUrl;
+            videoUrl = finalUrl;
+          } else if (redirectRes.url && redirectRes.url !== videoUrl) {
+            videoUrl = redirectRes.url;
+          }
+        } catch (e) {
+        }
+        return {
+          url: videoUrl,
+          headers: { "Referer": url }
+        };
+      }
+      return null;
+    } catch (err) {
+      return null;
+    }
+  });
+}
+
+// src/patronFilmMakinesi/extractor.js
+var cheerio3 = __toESM(require("cheerio-without-node-native"));
 function searchMovie(query) {
   return __async(this, null, function* () {
     const searchUrl = `${MAIN_URL}/arama/?s=${encodeURIComponent(query)}`;
     const html = yield fetchText(searchUrl);
-    const $ = cheerio2.load(html);
+    const $ = cheerio3.load(html);
     const results = [];
     $("div.item-relative").each((i, el) => {
       const anchor = $(el).find("a").first();
@@ -239,7 +404,7 @@ function searchMovie(query) {
 function extractFromMoviePage(movieUrl) {
   return __async(this, null, function* () {
     const html = yield fetchText(movieUrl);
-    const $ = cheerio2.load(html);
+    const $ = cheerio3.load(html);
     const streams = [];
     const linkUrls = [];
     const iframeSrc = $("iframe").attr("data-src") || $("iframe").attr("src");
@@ -256,7 +421,7 @@ function extractFromMoviePage(movieUrl) {
     for (let i = 0; i < linkUrls.length; i++) {
       const { url: embedUrl, title: label } = linkUrls[i];
       try {
-        if (embedUrl.includes("closeload.filmmakinesi")) {
+        if (embedUrl.includes("closeload")) {
           const clRes = yield extractCloseLoad(embedUrl, movieUrl);
           if (clRes) {
             streams.push({
@@ -265,6 +430,32 @@ function extractFromMoviePage(movieUrl) {
               url: clRes.url,
               quality: clRes.quality || "720p",
               headers: clRes.headers || { Referer: MAIN_URL + "/" }
+            });
+            continue;
+          }
+        }
+        if (embedUrl.includes("vidmoly")) {
+          const vidmolyRes = yield extractVidMoly(embedUrl, movieUrl);
+          if (vidmolyRes) {
+            streams.push({
+              name: "PatronFilmMakinesi",
+              title: `VidMoly - ${label}`,
+              url: vidmolyRes.url,
+              quality: "720p",
+              headers: __spreadValues(__spreadValues({}, HEADERS), vidmolyRes.headers)
+            });
+            continue;
+          }
+        }
+        if (embedUrl.includes("sibnet.ru")) {
+          const sibnetRes = yield extractSibnet(embedUrl);
+          if (sibnetRes) {
+            streams.push({
+              name: "PatronFilmMakinesi",
+              title: `Sibnet - ${label}`,
+              url: sibnetRes.url,
+              quality: "720p",
+              headers: __spreadValues(__spreadValues({}, HEADERS), sibnetRes.headers)
             });
             continue;
           }
