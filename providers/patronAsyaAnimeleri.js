@@ -1,6 +1,6 @@
 /**
- * patronAsyaAnimeleri - Built from src/patronAsyaAnimeleri/
- * Generated: 2026-04-18T20:48:59.948Z
+ * patronasyaAnimeleri - Built from src/patronasyaAnimeleri/
+ * Generated: 2026-04-18T21:50:38.930Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -59,7 +59,7 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// src/patronAsyaAnimeleri/http.js
+// src/patronasyaAnimeleri/http.js
 var MAIN_URL = "https://asyaanimeleri.top";
 var HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -91,24 +91,33 @@ function fixUrl(url) {
   return MAIN_URL + "/" + url;
 }
 
-// src/patronAsyaAnimeleri/tmdb.js
-var TMDB_BASE = "https://api.themoviedb.org/3";
-var TMDB_API_KEY = "1b6e5c4bd8cede7f8e4e6eb8c7cd99b7";
+// src/patronasyaAnimeleri/tmdb.js
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
       const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `${TMDB_BASE}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
+      const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
       const response = yield fetch(url, {
-        headers: { "User-Agent": "Mozilla/5.0" }
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+        }
       });
       if (!response.ok) {
-        throw new Error(`TMDB API hatas\u0131: ${response.status}`);
+        throw new Error(`TMDB HTML fetch hatas\u0131: ${response.status}`);
       }
-      const data = JSON.parse(yield response.text());
-      const trTitle = type === "tv" ? data.name || data.original_name || "" : data.title || data.original_title || "";
-      const origTitle = type === "tv" ? data.original_name || data.name || "" : data.original_title || data.title || "";
-      return { trTitle, origTitle };
+      const html = yield response.text();
+      let title = "";
+      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/);
+      if (ogMatch) {
+        title = ogMatch[1];
+      } else {
+        const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+        if (titleMatch) {
+          title = titleMatch[1].split("(")[0].split("\u2014")[0].trim();
+        }
+      }
+      return { trTitle: title, origTitle: title };
     } catch (e) {
       console.error(`[PatronAsyaAnimeleri] TMDB ba\u015Fl\u0131k hatas\u0131: ${e.message}`);
       return { trTitle: "", origTitle: "" };
@@ -116,7 +125,7 @@ function getTmdbTitle(tmdbId, mediaType) {
   });
 }
 
-// src/patronAsyaAnimeleri/extractor.js
+// src/patronasyaAnimeleri/extractor.js
 var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
 function searchAnime(query) {
   return __async(this, null, function* () {
@@ -124,9 +133,9 @@ function searchAnime(query) {
     const html = yield fetchText(searchUrl);
     const $ = import_cheerio_without_node_native.default.load(html);
     const results = [];
-    $("div.listupd article div.bsx").each((i, el) => {
-      const anchor = $(el).find("a").first();
-      const title = anchor.attr("title") || $(el).find("div.tt").text().trim();
+    $("article.bs").each((i, el) => {
+      const title = $(el).find("h2[itemprop='headline']").text().trim();
+      const anchor = $(el).find("a[itemprop='url']").first();
       const href = anchor.attr("href");
       if (title && href) {
         results.push({ title: title.trim(), href });
@@ -181,9 +190,12 @@ function extractFromEpisodePage(episodeUrl) {
         const iframeSrcMatch = decoded.match(/src="([^"]+)"/);
         if (!iframeSrcMatch)
           continue;
-        const iframeSrc = iframeSrcMatch[1];
+        let iframeSrc = iframeSrcMatch[1];
         if (!iframeSrc)
           continue;
+        if (iframeSrc.includes("gdplayer.to/") && iframeSrc.includes("/embed/")) {
+          iframeSrc = iframeSrc.replace("gdplayer.to/embed/", "vidmoly.to/embed-") + ".html";
+        }
         const streamUrl = fixUrl(iframeSrc);
         const label = opt.text().trim() || `Mirror ${i + 1}`;
         if (streamUrl.includes(".m3u8") || streamUrl.includes(".mp4")) {
@@ -298,7 +310,7 @@ function extractStreams(tmdbId, mediaType, season, episode) {
   });
 }
 
-// src/patronAsyaAnimeleri/index.js
+// src/patronasyaAnimeleri/index.js
 function getStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
     try {
