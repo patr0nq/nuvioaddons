@@ -1,6 +1,6 @@
 /**
  * patronasyaAnimeleri - Built from src/patronasyaAnimeleri/
- * Generated: 2026-04-18T22:07:20.143Z
+ * Generated: 2026-04-18T22:10:25.445Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -236,6 +236,33 @@ function extractVidMoly(url, referer) {
   });
 }
 
+// src/patronasyaAnimeleri/extractors/sibnet.js
+function extractSibnet(url) {
+  return __async(this, null, function* () {
+    try {
+      const fetchUrl = url;
+      const response = yield fetch(fetchUrl, {
+        headers: {
+          "User-Agent": HEADERS["User-Agent"],
+          "Referer": "https://video.sibnet.ru/"
+        }
+      });
+      const html = yield response.text();
+      const match = html.match(/src\s*:\s*["'](\/v\/[^"']+)["']/);
+      if (match) {
+        let videoUrl = "https://video.sibnet.ru" + match[1];
+        return {
+          url: videoUrl,
+          headers: { "Referer": url }
+        };
+      }
+      return null;
+    } catch (err) {
+      return null;
+    }
+  });
+}
+
 // src/patronasyaAnimeleri/extractor.js
 function searchAnime(query) {
   return __async(this, null, function* () {
@@ -369,6 +396,11 @@ function tryExtractFromEmbed(embedUrl, referer) {
         const vidmolyRes = yield extractVidMoly(embedUrl, referer);
         if (vidmolyRes)
           return vidmolyRes;
+      }
+      if (embedUrl.includes("sibnet.ru")) {
+        const sibnetRes = yield extractSibnet(embedUrl);
+        if (sibnetRes)
+          return sibnetRes;
       }
       const html = yield fetchText(embedUrl, {
         headers: {
