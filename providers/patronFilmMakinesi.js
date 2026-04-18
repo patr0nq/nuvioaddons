@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-04-18T22:23:07.566Z
+ * Generated: 2026-04-18T22:31:18.468Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -214,10 +214,14 @@ function searchMovie(query) {
     const html = yield fetchText(searchUrl);
     const $ = cheerio2.load(html);
     const results = [];
-    $("div.film-list div.item-relative").each((i, el) => {
-      const anchor = $(el).find("a.item").first();
-      const title = anchor.attr("data-title") ? anchor.attr("data-title").trim() : "";
+    $("div.item-relative").each((i, el) => {
+      const anchor = $(el).find("a").first();
       const href = anchor.attr("href");
+      let title = $(el).find("div.title").text().trim();
+      if (!title && anchor.attr("title"))
+        title = anchor.attr("title").trim();
+      if (!title && anchor.attr("data-title"))
+        title = anchor.attr("data-title").trim();
       if (title && href) {
         results.push({ title, href: fixUrl(href) });
       }

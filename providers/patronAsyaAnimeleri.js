@@ -1,6 +1,6 @@
 /**
  * patronasyaAnimeleri - Built from src/patronasyaAnimeleri/
- * Generated: 2026-04-18T22:23:07.422Z
+ * Generated: 2026-04-18T22:31:18.582Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -251,6 +251,25 @@ function extractSibnet(url) {
       const match = html.match(/src\s*:\s*["'](\/v\/[^"']+)["']/);
       if (match) {
         let videoUrl = "https://video.sibnet.ru" + match[1];
+        try {
+          const redirectRes = yield fetch(videoUrl, {
+            method: "GET",
+            redirect: "manual",
+            headers: {
+              "User-Agent": HEADERS["User-Agent"],
+              "Referer": url
+            }
+          });
+          let finalUrl = redirectRes.headers.get("location");
+          if (finalUrl) {
+            if (finalUrl.startsWith("//"))
+              finalUrl = "https:" + finalUrl;
+            videoUrl = finalUrl;
+          } else if (redirectRes.url && redirectRes.url !== videoUrl) {
+            videoUrl = redirectRes.url;
+          }
+        } catch (e) {
+        }
         return {
           url: videoUrl,
           headers: { "Referer": url }
