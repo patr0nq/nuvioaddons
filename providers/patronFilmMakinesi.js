@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-04-18T23:15:26.846Z
+ * Generated: 2026-04-18T23:57:56.445Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -220,19 +220,8 @@ function extractCloseLoad(url2, referer2) {
   });
 }
 
-// src/patronasyaAnimeleri/extractors/vidmoly.js
+// src/patronFilmMakinesi/extractors/vidmoly.js
 var cheerio2 = __toESM(require("cheerio-without-node-native"));
-
-// src/patronasyaAnimeleri/http.js
-var MAIN_URL2 = "https://asyaanimeleri.top";
-var HEADERS2 = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
-  "Referer": MAIN_URL2 + "/"
-};
-
-// src/patronasyaAnimeleri/extractors/vidmoly.js
 function unpackJS2(code) {
   try {
     const match = code.match(/}\('([^']*)',(\d+),(\d+),'([^']*)'\.split\('\|'\)/);
@@ -265,7 +254,7 @@ function extractVidMoly(url2, referer2) {
       fetchUrl = fetchUrl.replace(/https?:\/\/vidmoly\.[a-z]+/, "https://vidmoly.me");
       fetchUrl = fetchUrl.replace(/\/embed-([a-z0-9]+)\.html/, "/w/$1");
       let headers2 = {
-        "User-Agent": HEADERS2["User-Agent"],
+        "User-Agent": HEADERS["User-Agent"],
         "Sec-Fetch-Dest": "iframe"
       };
       if (referer2)
@@ -336,14 +325,14 @@ function extractVidMoly(url2, referer2) {
   });
 }
 
-// src/patronasyaAnimeleri/extractors/sibnet.js
+// src/patronFilmMakinesi/extractors/sibnet.js
 function extractSibnet(url2) {
   return __async(this, null, function* () {
     try {
       const fetchUrl = url2;
       const response2 = yield fetch(fetchUrl, {
         headers: {
-          "User-Agent": HEADERS2["User-Agent"],
+          "User-Agent": HEADERS["User-Agent"],
           "Referer": "https://video.sibnet.ru/"
         }
       });
@@ -356,7 +345,7 @@ function extractSibnet(url2) {
             method: "GET",
             redirect: "manual",
             headers: {
-              "User-Agent": HEADERS2["User-Agent"],
+              "User-Agent": HEADERS["User-Agent"],
               "Referer": url2
             }
           });
