@@ -1,6 +1,6 @@
 /**
  * patronKultFilmler - Built from src/patronKultFilmler/
- * Generated: 2026-04-18T23:01:35.130Z
+ * Generated: 2026-04-18T23:09:06.848Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -354,21 +354,37 @@ function searchPage(query, mediaType) {
     const html = yield fetchText(searchUrl);
     const $ = import_cheerio_without_node_native2.default.load(html);
     let match = null;
+    let firstFallback = null;
     $("div.movie-box").each((i, el) => {
       const a = $(el).find("a").first();
       const href = a.attr("href");
-      let title = $(el).find("div.img img").attr("alt");
+      let title = $(el).find("div.img img").attr("alt") || "";
       if (title && href) {
         const isTv = href.includes("/dizi/");
         if (mediaType === "tv" && isTv || mediaType === "movie" && !isTv) {
-          if (title.toLowerCase().includes(query.toLowerCase())) {
+          if (!firstFallback)
+            firstFallback = fixUrl(href);
+          const safeTitle = title.toLocaleLowerCase("tr-TR").replace(/[^a-z0-9ğüşöçığ]/g, " ");
+          const safeQuery = query.toLocaleLowerCase("tr-TR").replace(/[^a-z0-9ğüşöçığ]/g, " ");
+          if (safeTitle.includes(safeQuery)) {
             if (!match)
               match = fixUrl(href);
+          } else {
+            const queryWords = safeQuery.split(" ").filter((w) => w.length > 2);
+            let matchedWords = 0;
+            for (const w of queryWords) {
+              if (safeTitle.includes(w))
+                matchedWords++;
+            }
+            if (queryWords.length > 0 && matchedWords >= queryWords.length / 2) {
+              if (!match)
+                match = fixUrl(href);
+            }
           }
         }
       }
     });
-    return match;
+    return match || firstFallback;
   });
 }
 function findEpisodePage(seriesUrl, season, episode) {
