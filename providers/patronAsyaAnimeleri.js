@@ -1,10 +1,12 @@
 /**
  * patronasyaAnimeleri - Built from src/patronasyaAnimeleri/
- * Generated: 2026-04-18T21:50:38.930Z
+ * Generated: 2026-04-18T21:56:40.239Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __getProtoOf = Object.getPrototypeOf;
@@ -22,6 +24,7 @@ var __spreadValues = (a, b) => {
     }
   return a;
 };
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -127,6 +130,113 @@ function getTmdbTitle(tmdbId, mediaType) {
 
 // src/patronasyaAnimeleri/extractor.js
 var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
+
+// src/patronasyaAnimeleri/extractors/vidmoly.js
+var cheerio = __toESM(require("cheerio-without-node-native"));
+function unpackJS(code) {
+  try {
+    const match = code.match(/}\('([^']*)',(\d+),(\d+),'([^']*)'\.split\('\|'\)/);
+    if (!match)
+      return code;
+    let p = match[1];
+    const a = parseInt(match[2], 10);
+    const c = parseInt(match[3], 10);
+    const k = match[4].split("|");
+    const e = (c2) => {
+      return (c2 < a ? "" : e(parseInt(c2 / a, 10))) + (c2 % a > 35 ? String.fromCharCode(c2 % a + 29) : (c2 % a).toString(36));
+    };
+    let map = {};
+    for (let i = 0; i < c; i++) {
+      map[e(i)] = k[i];
+    }
+    const dictRegex = new RegExp("\\b(" + Object.keys(map).filter((key) => key).join("|") + ")\\b", "g");
+    const unpacked = p.replace(dictRegex, function(match2) {
+      return map[match2] || match2;
+    });
+    return unpacked;
+  } catch (err) {
+    return code;
+  }
+}
+function extractVidMoly(url, referer) {
+  return __async(this, null, function* () {
+    try {
+      let fetchUrl = url;
+      fetchUrl = fetchUrl.replace(/https?:\/\/vidmoly\.[a-z]+/, "https://vidmoly.me");
+      fetchUrl = fetchUrl.replace(/\/embed-([a-z0-9]+)\.html/, "/w/$1");
+      let headers = {
+        "User-Agent": HEADERS["User-Agent"],
+        "Sec-Fetch-Dest": "iframe"
+      };
+      if (referer)
+        headers["Referer"] = referer;
+      let response = yield fetch(fetchUrl, { headers });
+      let html = yield response.text();
+      if (html.toLowerCase().includes("video not found") || html.toLowerCase().includes("file was deleted")) {
+        return null;
+      }
+      if (html.includes("Select number") || html.toLowerCase().includes("select the number")) {
+        const $ = cheerio.load(html);
+        const opVal = $("input[name='op']").val();
+        const fileCodeVal = $("input[name='file_code']").val();
+        let answerVal = $("div.vhint b").text() || $("span.vhint b").text();
+        if (!answerVal) {
+          const ansMatch = html.match(/Please select (\d+)/i);
+          if (ansMatch)
+            answerVal = ansMatch[1];
+        }
+        const tsVal = $("input[name='ts']").val();
+        const nonceVal = $("input[name='nonce']").val();
+        const ctokVal = $("input[name='ctok']").val();
+        if (opVal && fileCodeVal && answerVal) {
+          const formData = new URLSearchParams();
+          formData.append("op", opVal);
+          formData.append("file_code", fileCodeVal);
+          formData.append("answer", answerVal);
+          formData.append("ts", tsVal);
+          formData.append("nonce", nonceVal);
+          formData.append("ctok", ctokVal);
+          let postResponse = yield fetch(fetchUrl, {
+            method: "POST",
+            headers: __spreadProps(__spreadValues({}, headers), { "Content-Type": "application/x-www-form-urlencoded" }),
+            body: formData.toString()
+          });
+          html = yield postResponse.text();
+        }
+      }
+      let videoUrl = null;
+      const scriptMatches = html.match(/eval\(function\(p,a,c,k,e,?[d]?\).*?\)\)/g);
+      if (scriptMatches) {
+        for (let script of scriptMatches) {
+          const unpacked = unpackJS(script);
+          const vidMatch = unpacked.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || unpacked.match(/file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
+          if (vidMatch) {
+            videoUrl = vidMatch[1];
+            break;
+          }
+        }
+      }
+      if (!videoUrl) {
+        const vidMatch = html.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || html.match(/file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
+        if (vidMatch) {
+          videoUrl = vidMatch[1];
+        }
+      }
+      if (videoUrl) {
+        return {
+          url: videoUrl,
+          headers: { "Referer": "https://vidmoly.me/" }
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error("[VidMoly] Error extracting:", err.message);
+      return null;
+    }
+  });
+}
+
+// src/patronasyaAnimeleri/extractor.js
 function searchAnime(query) {
   return __async(this, null, function* () {
     const searchUrl = `${MAIN_URL}/?s=${encodeURIComponent(query)}`;
@@ -216,6 +326,14 @@ function extractFromEpisodePage(episodeUrl) {
               quality: detectQuality(embedResult.url, label),
               headers: __spreadValues({ Referer: streamUrl }, HEADERS)
             });
+          } else {
+            streams.push({
+              name: "PatronAsyaAnimeleri",
+              title: `${label}`,
+              url: streamUrl,
+              quality: detectQuality(streamUrl, label),
+              headers: __spreadValues({ Referer: MAIN_URL + "/" }, HEADERS)
+            });
           }
         }
       } catch (e) {
@@ -244,6 +362,11 @@ function extractFromEpisodePage(episodeUrl) {
 function tryExtractFromEmbed(embedUrl, referer) {
   return __async(this, null, function* () {
     try {
+      if (embedUrl.includes("vidmoly")) {
+        const vidmolyRes = yield extractVidMoly(embedUrl, referer);
+        if (vidmolyRes)
+          return vidmolyRes;
+      }
       const html = yield fetchText(embedUrl, {
         headers: {
           Referer: referer,
