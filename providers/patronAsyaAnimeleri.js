@@ -1,6 +1,6 @@
 /**
  * patronasyaAnimeleri - Built from src/patronasyaAnimeleri/
- * Generated: 2026-04-18T22:10:25.445Z
+ * Generated: 2026-04-18T22:23:07.422Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -354,15 +354,8 @@ function extractFromEpisodePage(episodeUrl) {
               title: `${label}`,
               url: embedResult.url,
               quality: detectQuality(embedResult.url, label),
-              headers: __spreadValues({ Referer: streamUrl }, HEADERS)
-            });
-          } else {
-            streams.push({
-              name: "PatronAsyaAnimeleri",
-              title: `${label}`,
-              url: streamUrl,
-              quality: detectQuality(streamUrl, label),
-              headers: __spreadValues({ Referer: MAIN_URL + "/" }, HEADERS)
+              // Eğer tryExtractFromEmbed özel headers döndürdüyse öncelik ver
+              headers: embedResult.headers ? __spreadValues(__spreadValues({}, HEADERS), embedResult.headers) : __spreadValues({ Referer: streamUrl }, HEADERS)
             });
           }
         }
@@ -370,22 +363,45 @@ function extractFromEpisodePage(episodeUrl) {
         console.error(`[PatronAsyaAnimeleri] Mirror \xE7\xF6zme hatas\u0131: ${e.message}`);
       }
     }
+    const directIframes = [];
     $("div#pembed iframe, div.player-embed iframe, div.embed-responsive iframe").each((i, el) => {
       const iframeSrc = $(el).attr("src");
-      if (!iframeSrc || iframeSrc.trim() === "")
-        return;
-      const streamUrl = fixUrl(iframeSrc);
-      const alreadyAdded = streams.some((s) => s.url === streamUrl);
-      if (!alreadyAdded) {
-        streams.push({
-          name: "PatronAsyaAnimeleri",
-          title: `G\xF6m\xFCl\xFC Player ${i + 1}`,
-          url: streamUrl,
-          quality: "720p",
-          headers: __spreadValues({ Referer: MAIN_URL + "/" }, HEADERS)
-        });
+      if (iframeSrc && iframeSrc.trim() !== "") {
+        directIframes.push(fixUrl(iframeSrc));
       }
     });
+    for (let i = 0; i < directIframes.length; i++) {
+      const streamUrl = directIframes[i];
+      try {
+        if (streamUrl.includes(".m3u8") || streamUrl.includes(".mp4")) {
+          const alreadyAdded = streams.some((s) => s.url === streamUrl);
+          if (!alreadyAdded) {
+            streams.push({
+              name: "PatronAsyaAnimeleri",
+              title: `Direkt Y\xF6nlendirme ${i + 1}`,
+              url: streamUrl,
+              quality: "720p",
+              headers: __spreadValues({ Referer: MAIN_URL + "/" }, HEADERS)
+            });
+          }
+        } else {
+          const embedResult = yield tryExtractFromEmbed(streamUrl, episodeUrl);
+          if (embedResult) {
+            const alreadyAdded = streams.some((s) => s.url === embedResult.url);
+            if (!alreadyAdded) {
+              streams.push({
+                name: "PatronAsyaAnimeleri",
+                title: `G\xF6m\xFCl\xFC Player ${i + 1}`,
+                url: embedResult.url,
+                quality: detectQuality(embedResult.url, ""),
+                headers: embedResult.headers ? __spreadValues(__spreadValues({}, HEADERS), embedResult.headers) : __spreadValues({ Referer: MAIN_URL + "/" }, HEADERS)
+              });
+            }
+          }
+        }
+      } catch (e) {
+      }
+    }
     return streams;
   });
 }

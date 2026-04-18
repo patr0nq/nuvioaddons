@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-04-18T22:13:46.769Z
+ * Generated: 2026-04-18T22:23:07.566Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -269,14 +269,6 @@ function extractFromMoviePage(movieUrl) {
           streams.push({
             name: "PatronFilmMakinesi",
             title: label,
-            url: embedUrl,
-            quality: "720p",
-            headers: { Referer: movieUrl }
-          });
-        } else {
-          streams.push({
-            name: "PatronFilmMakinesi",
-            title: `Embed - ${label}`,
             url: embedUrl,
             quality: "720p",
             headers: { Referer: movieUrl }
