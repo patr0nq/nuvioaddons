@@ -1,6 +1,6 @@
 /**
  * patronMulti - Built from src/patronMulti/
- * Generated: 2026-04-19T17:13:35.239Z
+ * Generated: 2026-04-19T17:17:13.707Z
  */
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -122,37 +122,72 @@ function tryVidmody(imdbId, mediaType, season, episode, title, year) {
     }
   });
 }
+function encryptTmdbId(tmdbId) {
+  return __async(this, null, function* () {
+    try {
+      var res = yield fetch(`https://enc-dec.app/api/enc-vidlink?text=${tmdbId}`);
+      var data = yield res.json();
+      if (data && data.result)
+        return data.result;
+    } catch (e) {
+      console.log(`[Vidlink] \u015Eifreleme ba\u015Far\u0131s\u0131z: ${e.message}`);
+    }
+    return null;
+  });
+}
 function tryVidLink(tmdbId, mediaType, season, episode, title) {
   return __async(this, null, function* () {
     try {
-      console.log(`[PatronMulti V${VERSION}] VidLink kontrol ediliyor...`);
-      var url = mediaType === "movie" ? `https://vidlink.pro/movie/${tmdbId}` : `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`;
+      console.log(`[PatronMulti V${VERSION}] VidLink B-API kontrol ediliyor...`);
+      var encryptedId = yield encryptTmdbId(tmdbId);
+      if (!encryptedId) {
+        console.log(`[PatronMulti V${VERSION}] VidLink \u015Fifreleyici ba\u015Far\u0131s\u0131z, ge\xE7iliyor.`);
+        return [];
+      }
+      var apiUrl = mediaType === "tv" ? `https://vidlink.pro/api/b/tv/${encryptedId}/${season}/${episode}` : `https://vidlink.pro/api/b/movie/${encryptedId}`;
       var displayTitle = title + (mediaType !== "movie" ? ` - S${season}E${episode}` : "");
-      var response = yield fetch(url, {
+      var response = yield fetch(apiUrl, {
         headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+          "Connection": "keep-alive",
           "Referer": "https://vidlink.pro/",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+          "Origin": "https://vidlink.pro",
+          "Accept": "application/json,*/*"
         }
       });
       if (!response.ok)
         return [];
-      var text = yield response.text();
+      var data = yield response.json();
       var streams = [];
-      var m3u8Match = /["'](https:\/\/[^"']+\.m3u8[^"']*)["']/.exec(text);
-      if (m3u8Match && m3u8Match[1]) {
-        var m3u8Url = m3u8Match[1].replace(/\\/g, "");
-        streams.push({
-          url: m3u8Url,
-          name: "VidLink",
-          title: `${displayTitle} (VidLink)`,
-          quality: "Auto",
-          headers: {
-            "Referer": "https://vidlink.pro/",
-            "User-Agent": "Mozilla/5.0"
-          }
-        });
-        console.log(`[PatronMulti V${VERSION}] VidLink stream bulundu!`);
+      var headersConf = {
+        "Referer": "https://vidlink.pro/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      };
+      if (data && data.stream) {
+        if (data.stream.qualities) {
+          Object.keys(data.stream.qualities).forEach((qualityKey) => {
+            var qualityData = data.stream.qualities[qualityKey];
+            if (qualityData && qualityData.url) {
+              streams.push({
+                url: qualityData.url,
+                name: `VidLink`,
+                title: `${displayTitle} (VidLink - ${qualityKey})`,
+                quality: qualityKey,
+                headers: headersConf
+              });
+            }
+          });
+          console.log(`[PatronMulti V${VERSION}] VidLink streamleri bulundu!`);
+        } else if (data.stream.playlist) {
+          streams.push({
+            url: data.stream.playlist,
+            name: "VidLink",
+            title: `${displayTitle} (VidLink - Auto)`,
+            quality: "Auto",
+            headers: headersConf
+          });
+          console.log(`[PatronMulti V${VERSION}] VidLink stream(playlist) bulundu!`);
+        }
       }
       return streams;
     } catch (e) {
