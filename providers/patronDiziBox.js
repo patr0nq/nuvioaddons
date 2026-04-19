@@ -1,6 +1,6 @@
 /**
  * patronDiziBox - Built from src/patronDiziBox/
- * Generated: 2026-04-19T00:01:27.395Z
+ * Generated: 2026-04-19T00:04:50.157Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -385,6 +385,7 @@ function extractVidMoly(url, referer) {
 }
 
 // src/patronDiziBox/extractors/molystream.js
+var import_crypto_js2 = __toESM(require("crypto-js"));
 var import_cheerio_without_node_native4 = __toESM(require("cheerio-without-node-native"));
 function extractMolyStream(url, referer) {
   return __async(this, null, function* () {
@@ -400,18 +401,11 @@ function extractMolyStream(url, referer) {
         return null;
       }
       const dm = html.match(/CryptoJS\.AES\.decrypt\("([^"]+)"\s*,\s*"([^"]+)"\)/);
-      if (dm) {
+      if (dm && typeof import_crypto_js2.default !== "undefined") {
         try {
-          let CryptoJS2;
-          try {
-            CryptoJS2 = (yield import("crypto-js")).default;
-          } catch (e) {
-          }
-          if (CryptoJS2) {
-            const dec = CryptoJS2.AES.decrypt(dm[1], dm[2]).toString(CryptoJS2.enc.Utf8);
-            if (dec && (dec.includes("<html") || dec.includes("<video") || dec.includes("file"))) {
-              html = dec;
-            }
+          const dec = import_crypto_js2.default.AES.decrypt(dm[1], dm[2]).toString(import_crypto_js2.default.enc.Utf8);
+          if (dec && (dec.includes("<html") || dec.includes("<video") || dec.includes("file"))) {
+            html = dec;
           }
         } catch (e) {
         }
@@ -474,9 +468,11 @@ function searchPage(query) {
     for (const sel of containers) {
       $(sel).each((i, el) => {
         const anchor = $(el).find("a").first();
-        const href = anchor.attr("href");
+        let href = anchor.attr("href");
+        if (href && href.startsWith("/"))
+          href = MAIN_URL + href;
         const title = anchor.attr("title") || anchor.text().trim() || $(el).find("h2, h3, .post-title").first().text().trim();
-        if (href && href.includes("dizibox") && title) {
+        if (href && (href.includes("dizibox") || href.includes("/diziler/")) && title) {
           results.push({ title: title.trim(), href });
         }
       });
