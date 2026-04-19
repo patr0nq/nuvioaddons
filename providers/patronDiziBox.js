@@ -1,6 +1,6 @@
 /**
  * patronDiziBox - Built from src/patronDiziBox/
- * Generated: 2026-04-19T00:00:19.509Z
+ * Generated: 2026-04-19T00:01:27.395Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -138,7 +138,7 @@ function getTmdbTitle(tmdbId, mediaType = "tv") {
 
 // src/patronDiziBox/extractors/king.js
 var import_crypto_js = __toESM(require("crypto-js"));
-var cheerio = __toESM(require("cheerio-without-node-native"));
+var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
 var HEADERS2 = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -151,7 +151,7 @@ function extractKing(url) {
       console.log(`[King] Fetching: ${fixedUrl}`);
       const res = yield fetch(fixedUrl, { headers: HEADERS2 });
       const html = yield res.text();
-      const $ = cheerio.load(html);
+      const $ = import_cheerio_without_node_native.default.load(html);
       const iframe = $("div#Player iframe").attr("src");
       if (!iframe) {
         console.warn("[King] iframe bulunamad\u0131");
@@ -187,7 +187,7 @@ function extractKing(url) {
 }
 
 // src/patronDiziBox/extractors/okru.js
-var cheerio2 = __toESM(require("cheerio-without-node-native"));
+var import_cheerio_without_node_native2 = __toESM(require("cheerio-without-node-native"));
 var HEADERS3 = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
   "Origin": "https://ok.ru"
@@ -216,7 +216,7 @@ function extractOkRu(url) {
         console.warn("[OkRu] Video engellendi/bulunamad\u0131");
         return null;
       }
-      const $ = cheerio2.load(html);
+      const $ = import_cheerio_without_node_native2.default.load(html);
       const dataOptions = $("[data-module='OKVideo']").attr("data-options");
       let metadata = null;
       if (dataOptions) {
@@ -276,7 +276,7 @@ function extractOkRu(url) {
 }
 
 // src/patronDiziBox/extractors/vidmoly.js
-var cheerio3 = __toESM(require("cheerio-without-node-native"));
+var import_cheerio_without_node_native3 = __toESM(require("cheerio-without-node-native"));
 function unpackJS(code) {
   try {
     const match = code.match(/}\('([^']*)',(\d+),(\d+),'([^']*)'\\.split\('\\|'\)/);
@@ -317,7 +317,7 @@ function extractVidMoly(url, referer) {
         return null;
       }
       if (html.includes("Select number") || lower.includes("select the number")) {
-        const $ = cheerio3.load(html);
+        const $ = import_cheerio_without_node_native3.default.load(html);
         const opVal = $("input[name='op']").val();
         const fileCodeVal = $("input[name='file_code']").val();
         let answerVal = $("div.vhint b").text() || $("span.vhint b").text();
@@ -385,7 +385,7 @@ function extractVidMoly(url, referer) {
 }
 
 // src/patronDiziBox/extractors/molystream.js
-var cheerio4 = __toESM(require("cheerio-without-node-native"));
+var import_cheerio_without_node_native4 = __toESM(require("cheerio-without-node-native"));
 function extractMolyStream(url, referer) {
   return __async(this, null, function* () {
     try {
@@ -416,7 +416,7 @@ function extractMolyStream(url, referer) {
         } catch (e) {
         }
       }
-      const $ = cheerio4.load(html);
+      const $ = import_cheerio_without_node_native4.default.load(html);
       let videoUrl = $("video#sheplayer source").attr("src") || $("video source").attr("src") || $("video").attr("src");
       if (!videoUrl) {
         const patterns = [
@@ -453,7 +453,7 @@ function extractMolyStream(url, referer) {
 }
 
 // src/patronDiziBox/extractor.js
-var cheerio5 = __toESM(require("cheerio-without-node-native"));
+var import_cheerio_without_node_native5 = __toESM(require("cheerio-without-node-native"));
 function searchPage(query) {
   return __async(this, null, function* () {
     if (!query)
@@ -461,7 +461,7 @@ function searchPage(query) {
     const searchUrl = `${MAIN_URL}/?s=${encodeURIComponent(query)}`;
     console.log(`[PatronDiziBox] Aran\u0131yor: ${searchUrl}`);
     const html = yield fetchText(searchUrl);
-    const $ = cheerio5.load(html);
+    const $ = import_cheerio_without_node_native5.default.load(html);
     const results = [];
     const containers = [
       "article.detailed-article",
@@ -509,7 +509,7 @@ function searchPage(query) {
 function findEpisodePage(seriesUrl, epSeason, epEpisode) {
   return __async(this, null, function* () {
     const html = yield fetchText(seriesUrl);
-    const $ = cheerio5.load(html);
+    const $ = import_cheerio_without_node_native5.default.load(html);
     let seasonUrl = null;
     const seasonSelectors = [
       "div#seasons-list a",
@@ -537,7 +537,7 @@ function findEpisodePage(seriesUrl, epSeason, epEpisode) {
       seasonUrl = seriesUrl;
     }
     const seasonHtml = yield fetchText(seasonUrl);
-    const s$ = cheerio5.load(seasonHtml);
+    const s$ = import_cheerio_without_node_native5.default.load(seasonHtml);
     let episodeUrl = null;
     const epSelectors = [
       { container: "article.grid-box", titleEl: "div.post-title a", pattern: /(\d+)\.\s*bölüm/i },
@@ -592,7 +592,7 @@ function extractMolyRedirect(url, referer) {
         } catch (e) {
           str = decoded;
         }
-        const $ = cheerio5.load(str);
+        const $ = import_cheerio_without_node_native5.default.load(str);
         let iframe = $("div#Player iframe").attr("src") || $("iframe").attr("src");
         console.log(`[Dizibox Moly] Iframe bulundu: ${iframe}`);
         return iframe || null;
@@ -612,7 +612,7 @@ function extractStreamsFromPage(episodeUrl) {
   return __async(this, null, function* () {
     var _a;
     const html = yield fetchText(episodeUrl);
-    const $ = cheerio5.load(html);
+    const $ = import_cheerio_without_node_native5.default.load(html);
     const streams = [];
     const iframesToProcess = [];
     const mainIframe = $("div#video-area iframe, div#Player iframe, div.player-embed iframe").attr("src");
@@ -629,7 +629,7 @@ function extractStreamsFromPage(episodeUrl) {
     for (const alt of altOptions) {
       try {
         const altHtml = yield fetchText(alt.url, { "Referer": episodeUrl });
-        const altIframe = cheerio5.load(altHtml)("div#video-area iframe, div#Player iframe").attr("src");
+        const altIframe = import_cheerio_without_node_native5.default.load(altHtml)("div#video-area iframe, div#Player iframe").attr("src");
         if (altIframe)
           iframesToProcess.push({ name: alt.name, url: altIframe });
       } catch (e) {
@@ -657,7 +657,7 @@ function extractStreamsFromPage(episodeUrl) {
             streams.push({ name: "PatronDiziBox", title: `King - ${item.name}`, url: res.url, quality: res.quality || "1080p", headers: res.headers || HEADERS });
           } else {
             const kingHtml = yield fetchText(kingLink, { "Referer": episodeUrl });
-            const vmIframe = cheerio5.load(kingHtml)("div#Player iframe").attr("src");
+            const vmIframe = import_cheerio_without_node_native5.default.load(kingHtml)("div#Player iframe").attr("src");
             if (vmIframe) {
               const vmRes = vmIframe.includes("molystream") || vmIframe.includes("rufiiguta") ? yield extractMolyStream(vmIframe, kingLink) : yield extractVidMoly(vmIframe, kingLink);
               if (vmRes) {
