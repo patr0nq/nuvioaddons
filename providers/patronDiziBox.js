@@ -1,6 +1,6 @@
 /**
  * patronDiziBox - Built from src/patronDiziBox/
- * Generated: 2026-04-19T00:04:50.157Z
+ * Generated: 2026-04-19T00:10:21.517Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -456,6 +456,11 @@ function searchPage(query) {
     console.log(`[PatronDiziBox] Aran\u0131yor: ${searchUrl}`);
     const html = yield fetchText(searchUrl);
     const $ = import_cheerio_without_node_native5.default.load(html);
+    const canonicalUrl = $('link[rel="canonical"]').attr("href") || $('meta[property="og:url"]').attr("content");
+    if ($("div.tv-overview").length > 0 && canonicalUrl) {
+      console.log(`[PatronDiziBox] Do\u011Frudan dizi sayfas\u0131na y\xF6nlendirildi: ${canonicalUrl}`);
+      return canonicalUrl;
+    }
     const results = [];
     const containers = [
       "article.detailed-article",
@@ -708,7 +713,7 @@ function extractStreamsFromPage(episodeUrl) {
 }
 function extractStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
-    if (mediaType !== "tv")
+    if (mediaType === "movie")
       return [];
     const { trTitle, origTitle } = yield getTmdbTitle(tmdbId, mediaType);
     console.log(`[PatronDiziBox] TMDB: ${tmdbId} | TR: ${trTitle} | Orig: ${origTitle}`);
