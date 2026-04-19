@@ -49,6 +49,30 @@
       "limited": false,
       "disabledPlatforms": [],
       "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-vidsrc",
+      "name": "PatronVidsrc",
+      "description": "VidSrc.me üzerinden İngilizce film ve dizi embed linkleri. @patr0n tarafından geliştirildi.",
+      "version": "1.0.0",
+      "author": "patr0n",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/patronVidsrc.js",
+      "enabled": true,
+      "logo": "",
+      "contentLanguage": [
+        "en"
+      ],
+      "formats": [
+        "mp4",
+        "m3u8"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
     }
   ]
 }
