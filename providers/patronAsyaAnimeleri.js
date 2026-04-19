@@ -1,6 +1,6 @@
 /**
  * patronasyaAnimeleri - Built from src/patronasyaAnimeleri/
- * Generated: 2026-04-18T22:31:18.582Z
+ * Generated: 2026-04-18T23:15:26.823Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
