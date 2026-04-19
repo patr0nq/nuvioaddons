@@ -1,6 +1,6 @@
 /**
  * patronMulti - Built from src/patronMulti/
- * Generated: 2026-04-19T16:41:45.270Z
+ * Generated: 2026-04-19T16:50:13.796Z
  */
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -108,10 +108,10 @@ function tryVidmody(imdbId, mediaType, season, episode, title, year) {
           url: targetUrl,
           name: "Vidmody",
           title: displayTitle,
-          quality: "1080p",
+          quality: "Auto",
           headers: {
             "Referer": "https://vidmody.com/",
-            "User-Agent": HEADERS["User-Agent"]
+            "User-Agent": "Mozilla/5.0"
           }
         }];
       }
