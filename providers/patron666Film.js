@@ -1,6 +1,6 @@
 /**
  * patron666Film - Built from src/patron666Film/
- * Generated: 2026-04-19T18:36:43.722Z
+ * Generated: 2026-04-19T18:43:30.360Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -188,18 +188,41 @@ function extractFromMoviePage(movieUrl) {
     });
     const addedUrls = /* @__PURE__ */ new Set();
     for (const link of linkUrls) {
-      const { url: embedUrl, title: label } = link;
+      let { url: embedUrl, title: label } = link;
       if (addedUrls.has(embedUrl))
         continue;
       addedUrls.add(embedUrl);
       try {
-        streams.push({
-          name: "Patron666Film",
-          title: label,
-          url: embedUrl,
-          quality: "Auto",
-          headers: { Referer: movieUrl }
-        });
+        if (embedUrl.includes("rapidplay.website")) {
+          const idMatch = embedUrl.match(/#([^&]+)/);
+          if (idMatch) {
+            let cleanId = idMatch[1].replace("=", "");
+            let m3u8Url = `https://p.rapidplay.website/videos/${cleanId}/master.m3u8`;
+            streams.push({
+              name: "Patron666Film",
+              title: `Rapidplay - ${label}`,
+              url: m3u8Url,
+              quality: "Auto",
+              headers: {
+                "Referer": "https://p.rapidplay.website/",
+                "Origin": "https://p.rapidplay.website"
+              }
+            });
+          }
+          continue;
+        }
+        if (embedUrl.includes("strp2p.com") || embedUrl.includes("strp.watch")) {
+          continue;
+        }
+        if (embedUrl.includes(".m3u8") || embedUrl.includes(".mp4")) {
+          streams.push({
+            name: "Patron666Film",
+            title: label,
+            url: embedUrl,
+            quality: "Auto",
+            headers: { Referer: movieUrl }
+          });
+        }
       } catch (err) {
         console.error(`[Patron666Film] \xC7\u0131karma hatas\u0131: ${err.message}`);
       }
