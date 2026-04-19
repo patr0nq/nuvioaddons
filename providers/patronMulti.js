@@ -1,6 +1,6 @@
 /**
  * patronMulti - Built from src/patronMulti/
- * Generated: 2026-04-19T17:17:13.707Z
+ * Generated: 2026-04-19T17:26:32.902Z
  */
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -23,13 +23,6 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// src/patronMulti/http.js
-var HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Accept": "*/*",
-  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
-};
-
 // src/patronMulti/extractor.js
 var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
 var VERSION = "2.0.0";
@@ -46,43 +39,36 @@ function getTmdbInfo(tmdbId, mediaType) {
     };
   });
 }
-function tryBypassAPI(tmdbId, mediaType, title) {
+function trySmashyStream(tmdbId, mediaType, season, episode, title) {
   return __async(this, null, function* () {
     try {
-      console.log(`[PatronMulti V${VERSION}] Bypass API kontrol ediliyor...`);
-      var typeParams = mediaType === "movie" ? "movie" : "tv";
-      var apiUrl = `https://api.consumet.org/meta/tmdb/info/${tmdbId}?type=${typeParams}`;
-      var response = yield fetch(apiUrl);
-      var data = yield response.json();
-      if (!data || !data.id)
-        return [];
-      var streams = [];
-      var watchId = mediaType === "movie" ? data.episodeId : null;
-      if (!watchId)
-        return [];
-      var watchUrl = `https://api.consumet.org/meta/tmdb/watch/${watchId}?id=${data.id}`;
-      var watchRes = yield fetch(watchUrl);
-      var watchData = yield watchRes.json();
-      if (watchData && watchData.sources) {
-        for (var source of watchData.sources) {
-          if (source.url.includes(".m3u8") || source.url.includes(".mp4")) {
-            streams.push({
-              url: source.url,
-              name: "FlixHQ (Bypass)",
-              title: `Yabanc\u0131 Sunucu - ${source.quality || "Auto"}`,
-              quality: source.quality || "Auto",
-              headers: {
-                "Referer": "https://flixhq.to/",
-                "User-Agent": HEADERS["User-Agent"]
-              }
-            });
-          }
+      console.log(`[PatronMulti V${VERSION}] SmashyStream kontrol ediliyor...`);
+      var url = mediaType === "movie" ? `https://player.smashy.stream/movie/${tmdbId}` : `https://player.smashy.stream/tv/${tmdbId}?s=${season}&e=${episode}`;
+      var displayTitle = title + (mediaType !== "movie" ? ` - S${season}E${episode}` : "");
+      var response = yield fetch(url, {
+        headers: {
+          "Referer": "https://player.smashy.stream/",
+          "User-Agent": "Mozilla/5.0"
         }
-        console.log(`[PatronMulti V${VERSION}] Bypass API'den ${streams.length} stream \xE7\u0131kar\u0131ld\u0131!`);
+      });
+      if (!response.ok)
+        return [];
+      var text = yield response.text();
+      var streams = [];
+      var m3u8Match = /["'](https:\/\/[^"']+\.m3u8[^"']*)["']/.exec(text);
+      if (m3u8Match && m3u8Match[1]) {
+        streams.push({
+          url: m3u8Match[1].replace(/\\/g, ""),
+          name: "SmashyStream",
+          title: `${displayTitle} (SmashyStream)`,
+          quality: "Auto",
+          headers: { "Referer": "https://player.smashy.stream/" }
+        });
+        console.log(`[PatronMulti V${VERSION}] SmashyStream stream bulundu!`);
       }
       return streams;
     } catch (e) {
-      console.log(`[PatronMulti V${VERSION}] Bypass API atland\u0131 (Hata veya Sunucu Kapal\u0131): ${e.message}`);
+      console.log(`[PatronMulti V${VERSION}] SmashyStream atland\u0131: ${e.message}`);
       return [];
     }
   });
@@ -196,49 +182,6 @@ function tryVidLink(tmdbId, mediaType, season, episode, title) {
     }
   });
 }
-function tryEmbedSu(tmdbId, mediaType, season, episode, title) {
-  return __async(this, null, function* () {
-    try {
-      console.log(`[PatronMulti V${VERSION}] Embed.su kontrol ediliyor...`);
-      var url = mediaType === "movie" ? `https://embed.su/embed/movie/${tmdbId}` : `https://embed.su/embed/tv/${tmdbId}/${season}/${episode}`;
-      var displayTitle = title + (mediaType !== "movie" ? ` - S${season}E${episode}` : "");
-      var response = yield fetch(url, {
-        headers: {
-          "Referer": "https://embed.su/",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        }
-      });
-      if (!response.ok)
-        return [];
-      var text = yield response.text();
-      var streams = [];
-      var m3u8Match = /["'](https:\/\/[^"']+\.m3u8[^"']*)["']/.exec(text);
-      if (m3u8Match && m3u8Match[1]) {
-        var m3u8Url = m3u8Match[1].replace(/\\/g, "");
-        streams.push({
-          url: m3u8Url,
-          name: "Embed.su",
-          title: `${displayTitle} (Embed.su)`,
-          quality: "Auto",
-          headers: {
-            "Referer": "https://embed.su/",
-            "User-Agent": "Mozilla/5.0"
-          }
-        });
-        console.log(`[PatronMulti V${VERSION}] Embed.su stream bulundu!`);
-      } else {
-        var hashMatch = /window\.hash\s*=\s*['"]([^'"]+)['"]/.exec(text);
-        if (hashMatch) {
-          console.log(`[PatronMulti V${VERSION}] Embed.su token/hash korumas\u0131 alg\u0131land\u0131 (Geli\u015Fmi\u015F \xE7\xF6z\xFCmleme gerekebilir)`);
-        }
-      }
-      return streams;
-    } catch (e) {
-      console.log(`[PatronMulti V${VERSION}] Embed.su atland\u0131: ${e.message}`);
-      return [];
-    }
-  });
-}
 function extractStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
     try {
@@ -248,12 +191,10 @@ function extractStreams(tmdbId, mediaType, season, episode) {
       }
       console.log(`[PatronMulti V${VERSION}] Aran\u0131yor: ${info.imdbId} - ${info.title}`);
       var allStreams = [];
-      var bypassStreams = yield tryBypassAPI(tmdbId, mediaType, info.title);
-      allStreams = allStreams.concat(bypassStreams);
+      var smashyStreams = yield trySmashyStream(tmdbId, mediaType, season, episode, info.title);
+      allStreams = allStreams.concat(smashyStreams);
       var vidlinkStreams = yield tryVidLink(tmdbId, mediaType, season, episode, info.title);
       allStreams = allStreams.concat(vidlinkStreams);
-      var embedsuStreams = yield tryEmbedSu(tmdbId, mediaType, season, episode, info.title);
-      allStreams = allStreams.concat(embedsuStreams);
       var vidmodyStreams = yield tryVidmody(info.imdbId, mediaType, season, episode, info.title, info.year);
       allStreams = allStreams.concat(vidmodyStreams);
       console.log(`[PatronMulti V${VERSION}] Toplam ${allStreams.length} stream bulundu`);
