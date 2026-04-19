@@ -1,6 +1,6 @@
 /**
  * patronMulti - Built from src/patronMulti/
- * Generated: 2026-04-19T16:56:40.629Z
+ * Generated: 2026-04-19T17:06:42.960Z
  */
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -122,6 +122,53 @@ function tryVidmody(imdbId, mediaType, season, episode, title, year) {
     }
   });
 }
+function tryVidLink(tmdbId, mediaType, season, episode, title) {
+  return __async(this, null, function* () {
+    try {
+      console.log(`[PatronMulti V${VERSION}] VidLink kontrol ediliyor...`);
+      var apiUrl = mediaType === "movie" ? `https://vidlink.pro/api/video/movie/${tmdbId}` : `https://vidlink.pro/api/video/tv/${tmdbId}/${season}/${episode}`;
+      var displayTitle = title + (mediaType !== "movie" ? ` - S${season}E${episode}` : "");
+      var response = yield fetch(apiUrl, {
+        headers: {
+          "Referer": "https://vidlink.pro/",
+          "User-Agent": HEADERS["User-Agent"] || "Mozilla/5.0"
+        }
+      });
+      if (!response.ok)
+        return [];
+      var data = yield response.json();
+      var streams = [];
+      if (data && data.stream_url) {
+        streams.push({
+          url: data.stream_url,
+          name: "VidLink",
+          title: `${displayTitle} (VidLink)`,
+          quality: "Auto",
+          headers: {
+            "Referer": "https://vidlink.pro/",
+            "User-Agent": "Mozilla/5.0"
+          }
+        });
+        console.log(`[PatronMulti V${VERSION}] VidLink stream bulundu!`);
+      } else if (data && data.sources && data.sources.length > 0) {
+        for (var src of data.sources) {
+          streams.push({
+            url: src.file || src.url,
+            name: "VidLink",
+            title: `${displayTitle} - ${src.quality || "Auto"}`,
+            quality: src.quality || "Auto",
+            headers: { "Referer": "https://vidlink.pro/" }
+          });
+        }
+        console.log(`[PatronMulti V${VERSION}] VidLink streamleri bulundu!`);
+      }
+      return streams;
+    } catch (e) {
+      console.log(`[PatronMulti V${VERSION}] VidLink atland\u0131: ${e.message}`);
+      return [];
+    }
+  });
+}
 function extractStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
     try {
@@ -133,6 +180,8 @@ function extractStreams(tmdbId, mediaType, season, episode) {
       var allStreams = [];
       var bypassStreams = yield tryBypassAPI(tmdbId, mediaType, info.title);
       allStreams = allStreams.concat(bypassStreams);
+      var vidlinkStreams = yield tryVidLink(tmdbId, mediaType, season, episode, info.title);
+      allStreams = allStreams.concat(vidlinkStreams);
       var vidmodyStreams = yield tryVidmody(info.imdbId, mediaType, season, episode, info.title, info.year);
       allStreams = allStreams.concat(vidmodyStreams);
       console.log(`[PatronMulti V${VERSION}] Toplam ${allStreams.length} stream bulundu`);
