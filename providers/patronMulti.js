@@ -1,6 +1,6 @@
 /**
  * patronMulti - Built from src/patronMulti/
- * Generated: 2026-04-19T16:50:13.796Z
+ * Generated: 2026-04-19T16:56:40.629Z
  */
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -93,15 +93,15 @@ function tryVidmody(imdbId, mediaType, season, episode, title, year) {
       var targetUrl = "";
       var displayTitle = title;
       if (mediaType === "movie") {
-        targetUrl = `https://vidmody.com/vs/${imdbId}`;
+        targetUrl = `https://vidmody.com/vs/${imdbId}#.m3u8`;
         displayTitle += year ? ` (${year})` : "";
       } else {
         var sStr = "s" + season;
         var eStr = "e" + (episode < 10 ? "0" + episode : episode);
-        targetUrl = `https://vidmody.com/vs/${imdbId}/${sStr}/${eStr}`;
+        targetUrl = `https://vidmody.com/vs/${imdbId}/${sStr}/${eStr}#.m3u8`;
         displayTitle += ` - ${sStr.toUpperCase()}${eStr.toUpperCase()}`;
       }
-      var checkRes = yield fetch(targetUrl, { method: "HEAD" });
+      var checkRes = yield fetch(targetUrl.replace("#.m3u8", ""), { method: "HEAD" });
       if (checkRes.status === 200) {
         console.log(`[PatronMulti V${VERSION}] Vidmody: \u0130\xE7erik bulundu`);
         return [{
