@@ -1,6 +1,6 @@
 /**
  * patronMulti - Built from src/patronMulti/
- * Generated: 2026-04-19T17:51:55.932Z
+ * Generated: 2026-04-19T18:24:50.169Z
  */
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
@@ -25,7 +25,7 @@ var __async = (__this, __arguments, generator) => {
 
 // src/patronMulti/extractor.js
 var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
-var VERSION = "3.0.0";
+var VERSION = "3.1.0";
 var VIDLINK_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
   "Connection": "keep-alive",
@@ -199,62 +199,6 @@ function tryVidLink(tmdbId, mediaType, season, episode, title, year) {
     }
   });
 }
-function tryVidsrcPro(tmdbId, mediaType, season, episode, title, year) {
-  return __async(this, null, function* () {
-    try {
-      console.log(`[PatronMulti V${VERSION}] Vidsrc.pro kontrol ediliyor...`);
-      var url = mediaType === "tv" ? `https://vidsrc.pro/embed/tv/${tmdbId}/${season}/${episode}` : `https://vidsrc.pro/embed/movie/${tmdbId}`;
-      var displayTitle = mediaType === "tv" ? `${title} S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")}` : year ? `${title} (${year})` : title;
-      var response = yield fetch(url, { headers: { "Referer": "https://vidsrc.pro/", "User-Agent": "Mozilla/5.0" } });
-      var text = yield response.text();
-      var mMatch = text.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/i);
-      if (mMatch) {
-        return [{
-          url: mMatch[1].replace(/\\/g, ""),
-          name: "VidsrcPro",
-          title: `${displayTitle} (VidsrcPro)`,
-          quality: "Auto",
-          headers: { "Referer": "https://vidsrc.pro/" }
-        }];
-      }
-      return [];
-    } catch (e) {
-      console.log(`[PatronMulti V${VERSION}] Vidsrc.pro hatas\u0131: ${e.message}`);
-      return [];
-    }
-  });
-}
-function tryMultiEmbed(tmdbId, mediaType, season, episode, title, year) {
-  return __async(this, null, function* () {
-    try {
-      console.log(`[PatronMulti V${VERSION}] MultiEmbed kontrol ediliyor...`);
-      var url = mediaType === "tv" ? `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}` : `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`;
-      var displayTitle = mediaType === "tv" ? `${title} S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")}` : year ? `${title} (${year})` : title;
-      var response = yield fetch(url, { headers: { "Referer": "https://multiembed.mov/", "User-Agent": "Mozilla/5.0" } });
-      var text = yield response.text();
-      var streams = [];
-      var matches = text.match(/["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/gi);
-      if (matches) {
-        matches.forEach(function(m) {
-          var cleanUrl = m.replace(/["']/g, "").replace(/\\/g, "");
-          if (!cleanUrl.includes("google") && !cleanUrl.includes("histats")) {
-            streams.push({
-              url: cleanUrl,
-              name: "MultiEmbed",
-              title: `${displayTitle} (MultiEmbed)`,
-              quality: "Auto",
-              headers: { "Referer": "https://multiembed.mov/" }
-            });
-          }
-        });
-      }
-      return streams.slice(0, 3);
-    } catch (e) {
-      console.log(`[PatronMulti V${VERSION}] MultiEmbed hatas\u0131: ${e.message}`);
-      return [];
-    }
-  });
-}
 function tryVidmody(imdbId, mediaType, season, episode, title, year) {
   return __async(this, null, function* () {
     try {
@@ -303,10 +247,6 @@ function extractStreams(tmdbId, mediaType, season, episode) {
       var allStreams = [];
       var vidlinkStreams = yield tryVidLink(tmdbId, mediaType, season, episode, info.title, info.year);
       allStreams = allStreams.concat(vidlinkStreams);
-      var vidsrcProStreams = yield tryVidsrcPro(tmdbId, mediaType, season, episode, info.title, info.year);
-      allStreams = allStreams.concat(vidsrcProStreams);
-      var multiStreams = yield tryMultiEmbed(tmdbId, mediaType, season, episode, info.title, info.year);
-      allStreams = allStreams.concat(multiStreams);
       var vidmodyStreams = yield tryVidmody(info.imdbId, mediaType, season, episode, info.title, info.year);
       allStreams = allStreams.concat(vidmodyStreams);
       console.log(`[PatronMulti V${VERSION}] Toplam ${allStreams.length} stream bulundu`);

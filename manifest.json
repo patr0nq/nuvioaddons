@@ -73,6 +73,29 @@
       "limited": false,
       "disabledPlatforms": [],
       "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-666-film",
+      "name": "Patron666Film",
+      "description": "666filmizle.site üzerinden filmler. @patr0n tarafından geliştirildi.",
+      "version": "1.0.0",
+      "author": "patr0n",
+      "supportedTypes": [
+        "movie"
+      ],
+      "filename": "providers/patron666Film.js",
+      "enabled": true,
+      "logo": "",
+      "contentLanguage": [
+        "tr"
+      ],
+      "formats": [
+        "mp4",
+        "m3u8"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
     }
   ]
 }
