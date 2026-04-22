@@ -122,6 +122,30 @@
       "limited": false,
       "disabledPlatforms": [],
       "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-hdf-cehennemi",
+      "name": "PatronHDFCehennemi",
+      "description": "HDFilmCehennemi tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
+      "version": "1.0.0",
+      "author": "patr0n",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/patronhdfcehennemi.js",
+      "enabled": true,
+      "logo": "",
+      "contentLanguage": [
+        "tr"
+      ],
+      "formats": [
+        "m3u8",
+        "mp4"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
     }
   ]
 }
