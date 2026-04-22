@@ -1,6 +1,6 @@
 /**
  * patrondortkhd - Built from src/patrondortkhd/
- * Generated: 2026-04-22T15:27:55.281Z
+ * Generated: 2026-04-22T15:30:32.753Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -138,7 +138,7 @@ function fetchText(_0) {
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
-      let decodeHtml = function(text) {
+      let decodeHtml = function (text) {
         return (text || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#039;/g, "'");
       };
       const type = mediaType === "movie" ? "movie" : "tv";
@@ -374,10 +374,14 @@ function collectEpisodeLinks($, pageUrl, season, episode) {
   return [...new Set(packLinks)];
 }
 function buildStream(title, url, quality = "Auto", headers = {}) {
+  let finalUrl = url;
+  if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
+    finalUrl += finalUrl.includes("#") ? "" : "#.mkv";
+  }
   return {
     name: PROVIDER_NAME,
     title,
-    url,
+    url: finalUrl,
     quality,
     headers: Object.keys(headers).length ? headers : void 0
   };
