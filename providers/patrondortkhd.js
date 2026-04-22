@@ -1,6 +1,6 @@
 /**
  * patrondortkhd - Built from src/patrondortkhd/
- * Generated: 2026-04-22T14:17:37.372Z
+ * Generated: 2026-04-22T15:20:33.362Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -38,7 +38,10 @@ var __copyProps = (to, from, except, desc) => {
   return to;
 };
 var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
@@ -138,6 +141,9 @@ function fetchText(_0) {
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
+      let decodeHtml = function(text) {
+        return (text || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#039;/g, "'");
+      };
       const type = mediaType === "movie" ? "movie" : "tv";
       const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
       const response = yield fetch(url, {
@@ -153,17 +159,17 @@ function getTmdbTitle(tmdbId, mediaType) {
       let title = "";
       const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
       if (ogMatch) {
-        title = ogMatch[1].split("(")[0].trim();
+        title = decodeHtml(ogMatch[1]).split("(")[0].trim();
       } else {
         const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
         if (titleMatch) {
-          title = titleMatch[1].split("(")[0].split("\u2014")[0].split("\xE2\u20AC\u201D")[0].trim();
+          title = decodeHtml(titleMatch[1]).split("(")[0].split("\u2014")[0].split("\xE2\u20AC\u201D")[0].trim();
         }
       }
       let origTitle = title;
       const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
       if (origMatch) {
-        const matched = origMatch[1].replace("Orijinal Adi", "").replace("Orijinal Ad\u0131", "").trim();
+        const matched = decodeHtml(origMatch[1]).replace("Orijinal Adi", "").replace("Orijinal Ad\u0131", "").trim();
         if (matched)
           origTitle = matched;
       }
