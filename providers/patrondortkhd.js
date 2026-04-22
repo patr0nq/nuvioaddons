@@ -1,6 +1,6 @@
 /**
  * patrondortkhd - Built from src/patrondortkhd/
- * Generated: 2026-04-22T15:30:32.753Z
+ * Generated: 2026-04-22T15:45:56.394Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -38,7 +38,10 @@ var __copyProps = (to, from, except, desc) => {
   return to;
 };
 var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
@@ -72,7 +75,7 @@ __export(patrondortkhd_exports, {
 module.exports = __toCommonJS(patrondortkhd_exports);
 
 // src/patrondortkhd/extractor.js
-var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
+var import_cheerio_without_node_native2 = __toESM(require("cheerio-without-node-native"));
 
 // src/patrondortkhd/http.js
 var DOMAINS_URL = "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/domains.json";
@@ -135,10 +138,11 @@ function fetchText(_0) {
 }
 
 // src/patrondortkhd/tmdb.js
+var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
-      let decodeHtml = function (text) {
+      let decodeHtml = function(text) {
         return (text || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#039;/g, "'");
       };
       const type = mediaType === "movie" ? "movie" : "tv";
@@ -163,17 +167,32 @@ function getTmdbTitle(tmdbId, mediaType) {
           title = decodeHtml(titleMatch[1]).split("(")[0].split("\u2014")[0].split("\xE2\u20AC\u201D")[0].trim();
         }
       }
+      const $ = import_cheerio_without_node_native.default.load(html);
       let origTitle = title;
-      const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
-      if (origMatch) {
-        const matched = decodeHtml(origMatch[1]).replace("Orijinal Adi", "").replace("Orijinal Ad\u0131", "").trim();
-        if (matched)
-          origTitle = matched;
+      $("section.facts p").each((_, el) => {
+        const text = $(el).text();
+        if (text.includes("Orijinal Ba\u015Fl\u0131k") || text.includes("Original Title")) {
+          const found = text.replace("Orijinal Ba\u015Fl\u0131k", "").replace("Original Title", "").trim();
+          if (found)
+            origTitle = decodeHtml(found);
+        }
+      });
+      if (origTitle === title) {
+        const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
+        if (origMatch) {
+          const matched = decodeHtml(origMatch[1]).replace("Orijinal Adi", "").replace("Orijinal Ad\u0131", "").trim();
+          if (matched)
+            origTitle = matched;
+        }
       }
-      return { trTitle: title, origTitle };
+      let shortTitle = "";
+      if (origTitle && (origTitle.includes(":") || origTitle.toLowerCase().includes(" and "))) {
+        shortTitle = origTitle.split(":")[0].split(/ and /i)[0].trim();
+      }
+      return { trTitle: title, origTitle, shortTitle };
     } catch (error) {
       console.error(`[PatronDortKHD] TMDB baslik hatasi: ${error.message}`);
-      return { trTitle: "", origTitle: "" };
+      return { trTitle: "", origTitle: "", shortTitle: "" };
     }
   });
 }
@@ -306,26 +325,21 @@ function searchContent(query, mediaType) {
     const mainUrl = yield getMainUrl();
     const searchUrl = `${mainUrl}/?s=${encodeURIComponent(query)}`;
     const html = yield fetchText(searchUrl);
-    const $ = import_cheerio_without_node_native.default.load(html);
+    const $ = import_cheerio_without_node_native2.default.load(html);
     const results = [];
-    $("div.card-grid a, div.card-grid-small a, a[href]").each((_, el) => {
+    $("div.card-grid a, div.card-grid-small a").each((_, el) => {
       const href = fixUrl($(el).attr("href"), mainUrl);
       if (!href || href.includes("/category/") || href.includes("/tag/"))
         return;
       const title = $(el).find("h3").first().text().trim() || $(el).attr("title") || $(el).find("img").attr("alt") || $(el).text().trim();
       if (!title)
         return;
-      const lowerHref = href.toLowerCase();
-      const looksSeries = /season|s\d{1,2}|episode|series/.test(lowerHref) || /season|series/i.test(title);
-      const looksMovie = /movie/i.test(title) || /movies/.test(lowerHref);
-      if (mediaType === "movie" && looksSeries && !looksMovie)
-        return;
       results.push({ title, href });
     });
     if (!results.length)
       return null;
     const q = normalizeTitle(query);
-    return ((_a = results.find((item) => normalizeTitle(item.title) === q)) == null ? void 0 : _a.href) || ((_b = results.find((item) => normalizeTitle(item.title).startsWith(q))) == null ? void 0 : _b.href) || ((_c = results.find((item) => normalizeTitle(item.title).includes(q))) == null ? void 0 : _c.href) || results[0].href;
+    return ((_a = results.find((item) => normalizeTitle(item.title) === q)) == null ? void 0 : _a.href) || ((_b = results.find((item) => normalizeTitle(item.title).startsWith(q))) == null ? void 0 : _b.href) || ((_c = results.find((item) => normalizeTitle(item.title).includes(q))) == null ? void 0 : _c.href) || null;
   });
 }
 function collectMovieLinks($, pageUrl) {
@@ -402,7 +416,7 @@ function resolveHubcdnDirect(url, sourceTitle) {
 function resolveHubdrive(url, sourceTitle) {
   return __async(this, null, function* () {
     const html = yield fetchText(url);
-    const $ = import_cheerio_without_node_native.default.load(html);
+    const $ = import_cheerio_without_node_native2.default.load(html);
     const href = $("a.btn.btn-primary.btn-user.btn-success1.m-1").attr("href");
     if (!href)
       return [];
@@ -412,7 +426,7 @@ function resolveHubdrive(url, sourceTitle) {
 function resolveHblinks(url, sourceTitle) {
   return __async(this, null, function* () {
     const html = yield fetchText(url);
-    const $ = import_cheerio_without_node_native.default.load(html);
+    const $ = import_cheerio_without_node_native2.default.load(html);
     const links = [];
     $("h3 a, h5 a, div.entry-content p a").each((_, el) => {
       const href = fixUrl($(el).attr("href"), url);
@@ -432,14 +446,14 @@ function resolveHubcloud(url, sourceTitle, referer) {
     let entryUrl = url;
     if (!/hubcloud\.php/i.test(url)) {
       const html2 = yield fetchText(url, { headers: baseHeaders });
-      const $2 = import_cheerio_without_node_native.default.load(html2);
+      const $2 = import_cheerio_without_node_native2.default.load(html2);
       const raw = $2("#download").attr("href");
       if (!raw)
         return [];
       entryUrl = fixUrl(raw, url);
     }
     const html = yield fetchText(entryUrl, { headers: __spreadValues({ Referer: url }, baseHeaders) });
-    const $ = import_cheerio_without_node_native.default.load(html);
+    const $ = import_cheerio_without_node_native2.default.load(html);
     const size = $("i#size").first().text().trim();
     const header = $("div.card-header").first().text().trim();
     const details = cleanFileDetails(header);
@@ -519,8 +533,8 @@ function resolveLink(rawUrl, sourceTitle, referer = "") {
 }
 function extractStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
-    const { trTitle, origTitle } = yield getTmdbTitle(tmdbId, mediaType);
-    console.log(`[${PROVIDER_NAME}] TMDB: ${tmdbId} | TR: ${trTitle} | ORIG: ${origTitle}`);
+    const { trTitle, origTitle, shortTitle } = yield getTmdbTitle(tmdbId, mediaType);
+    console.log(`[${PROVIDER_NAME}] TMDB: ${tmdbId} | TR: ${trTitle} | ORIG: ${origTitle} | SHORT: ${shortTitle}`);
     if (!trTitle && !origTitle)
       return [];
     let contentUrl = null;
@@ -529,12 +543,15 @@ function extractStreams(tmdbId, mediaType, season, episode) {
     if (!contentUrl && origTitle && origTitle !== trTitle) {
       contentUrl = yield searchContent(origTitle, mediaType);
     }
+    if (!contentUrl && shortTitle) {
+      contentUrl = yield searchContent(shortTitle, mediaType);
+    }
     if (!contentUrl) {
       console.warn(`[${PROVIDER_NAME}] Icerik bulunamadi`);
       return [];
     }
     const html = yield fetchText(contentUrl);
-    const $ = import_cheerio_without_node_native.default.load(html);
+    const $ = import_cheerio_without_node_native2.default.load(html);
     const isMoviePage = $("div.episodes-list").length === 0;
     let links = [];
     if (mediaType === "movie" || mediaType !== "movie" && isMoviePage) {
