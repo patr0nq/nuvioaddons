@@ -14,7 +14,7 @@
       ],
       "filename": "providers/patronAsyaAnimeleri.js",
       "enabled": true,
-      "logo": "",
+      "logo": "https://www.google.com/s2/favicons?domain=asyaanimeleri.top&sz=%size%",
       "contentLanguage": [
         "tr"
       ],
@@ -38,7 +38,7 @@
       ],
       "filename": "providers/patronFilmMakinesi.js",
       "enabled": true,
-      "logo": "",
+      "logo": "https://www.google.com/s2/favicons?domain=filmmakinesi.film&sz=%size%",
       "contentLanguage": [
         "tr"
       ],
@@ -85,7 +85,7 @@
       ],
       "filename": "providers/patron666Film.js",
       "enabled": true,
-      "logo": "",
+      "logo": "https://www.google.com/s2/favicons?domain=666filmizle.site&sz=%size%",
       "contentLanguage": [
         "tr"
       ],
@@ -135,7 +135,7 @@
       ],
       "filename": "providers/patronhdfcehennemi.js",
       "enabled": true,
-      "logo": "",
+      "logo": "https://www.google.com/s2/favicons?domain=hdfilmcehennemi.com&sz=%size%",
       "contentLanguage": [
         "tr"
       ],
