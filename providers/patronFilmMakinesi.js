@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-04-19T00:00:34.863Z
+ * Generated: 2026-04-22T13:36:00.612Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -152,69 +152,123 @@ function getTmdbTitle(tmdbId, mediaType) {
 }
 
 // src/patronFilmMakinesi/extractors/closeload.js
-function unpackJS(code) {
+function decodeBase64Latin1(input) {
   try {
-    const match = code.match(/}\('([^']*)',(\d+),(\d+),'([^']*)'\.split\('\|'\)/);
-    if (!match)
-      return code;
-    let p = match[1];
-    const a = parseInt(match[2], 10);
-    const c = parseInt(match[3], 10);
-    const k = match[4].split("|");
-    const e = (c2) => {
-      return (c2 < a ? "" : e(parseInt(c2 / a, 10))) + (c2 % a > 35 ? String.fromCharCode(c2 % a + 29) : (c2 % a).toString(36));
-    };
-    let map = {};
-    for (let i = 0; i < c; i++) {
-      map[e(i)] = k[i];
-    }
-    const dictRegex = new RegExp("\\b(" + Object.keys(map).filter((key) => key).join("|") + ")\\b", "g");
-    const unpacked2 = p.replace(dictRegex, function(match2) {
-      return map[match2] || match2;
-    });
-    return unpacked2;
-  } catch (err) {
-    return code;
+    if (typeof atob === "function")
+      return atob(input);
+    return Buffer.from(input, "base64").toString("latin1");
+  } catch (e) {
+    return input;
   }
+}
+function rot13(str) {
+  return str.replace(/[a-zA-Z]/g, (c) => {
+    const base = c <= "Z" ? 65 : 97;
+    return String.fromCharCode((c.charCodeAt(0) - base + 13) % 26 + base);
+  });
+}
+function decryptNative(html2) {
+  try {
+    const scriptBlockMatch = html2.match(
+      /<script[^>]*>([\s\S]*?dc_[a-zA-Z0-9_]+\([\s\S]*?)<\/script>/i
+    );
+    const scriptContent = scriptBlockMatch == null ? void 0 : scriptBlockMatch[1];
+    if (!scriptContent)
+      return null;
+    const arrayMatch = scriptContent.match(/\(\[((?:"[^"]+",?\s*)+)\]\)/);
+    if (!(arrayMatch == null ? void 0 : arrayMatch[1]))
+      return null;
+    const parts = arrayMatch[1].split(",").map((s) => s.trim().replace(/^"|"$/g, "").replace(/\\\//g, "/"));
+    const moduloMatch = scriptContent.match(/(\d+)\s*%\s*\(i\s*\+\s*(\d+)\)/);
+    const magicNum = (moduloMatch == null ? void 0 : moduloMatch[1]) ? Number(moduloMatch[1]) : 399756995;
+    const magicOffset = (moduloMatch == null ? void 0 : moduloMatch[2]) ? Number(moduloMatch[2]) : 5;
+    const functionBodyMatch = scriptContent.match(
+      /function\s+dc_[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{([\s\S]*?)return\s+unmix;/
+    );
+    const functionBody = (functionBodyMatch == null ? void 0 : functionBodyMatch[1]) || scriptContent;
+    const reverseIdx = functionBody.indexOf(".reverse()");
+    const atobIdx = functionBody.indexOf("atob(");
+    const rot13Idx = functionBody.search(/\.replace\(\s*\/\[a-zA-Z\]\/g/);
+    const operations = [
+      { idx: reverseIdx, op: "reverse" },
+      { idx: atobIdx, op: "atob" },
+      { idx: rot13Idx, op: "rot13" }
+    ].filter((x) => x.idx !== -1).sort((a, b) => a.idx - b.idx);
+    let result = parts.join("");
+    for (const { op } of operations) {
+      if (op === "reverse")
+        result = result.split("").reverse().join("");
+      else if (op === "atob")
+        result = decodeBase64Latin1(result);
+      else if (op === "rot13")
+        result = rot13(result);
+    }
+    let unmix = "";
+    for (let i = 0; i < result.length; i++) {
+      const charCode = result.charCodeAt(i);
+      const decryptedCode = (charCode - magicNum % (i + magicOffset) + 256) % 256;
+      unmix += String.fromCharCode(decryptedCode);
+    }
+    return unmix;
+  } catch (e) {
+    return null;
+  }
+}
+function processSubtitles(html2) {
+  var _a, _b, _c;
+  const subtitles = [];
+  try {
+    const tracksMatch = html2.match(/tracks\s*:\s*(\[[\s\S]*?\])/i);
+    if (!(tracksMatch == null ? void 0 : tracksMatch[1]))
+      return subtitles;
+    const tracksJson = tracksMatch[1];
+    const blocks = tracksJson.match(/\{[^}]*\}/g) || [];
+    for (const block of blocks) {
+      const file = (_b = (_a = block.match(/"file"\s*:\s*"([^"]+)"/)) == null ? void 0 : _a[1]) == null ? void 0 : _b.replace(/\\\//g, "/");
+      const label = ((_c = block.match(/"label"\s*:\s*"([^"]+)"/)) == null ? void 0 : _c[1]) || "Altyaz\u0131";
+      if (file && /^https?:\/\//i.test(file)) {
+        subtitles.push({ label, file });
+      }
+    }
+  } catch (e) {
+  }
+  return subtitles;
 }
 function extractCloseLoad(url2, referer2) {
   return __async(this, null, function* () {
+    var _a;
     try {
-      let headers2 = {
+      const headers2 = {
         "User-Agent": HEADERS["User-Agent"],
-        "Referer": "https://closeload.filmmakinesi.to/",
+        "Referer": referer2 || "https://closeload.filmmakinesi.to/",
         "Origin": "https://closeload.filmmakinesi.to"
       };
-      let response2 = yield fetch(url2, { headers: headers2 });
-      let html2 = yield response2.text();
-      let videoUrl = null;
-      const scriptMatches = html2.match(/eval\(function\(p,a,c,k,e,?[d]?\).*?\)\)/g);
-      if (scriptMatches) {
-        for (let script of scriptMatches) {
-          const unpacked2 = unpackJS(script);
-          const vidMatch = unpacked2.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || unpacked2.match(/src\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || unpacked2.match(/["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i);
-          if (vidMatch) {
-            videoUrl = vidMatch[1];
-            break;
-          }
-        }
+      const response2 = yield fetch(url2, { headers: headers2 });
+      const html2 = yield response2.text();
+      let videoUrl = decryptNative(html2);
+      if (!videoUrl) {
+        const ldMatch = html2.match(/"contentUrl"\s*:\s*"([^"]+)"/i);
+        videoUrl = (_a = ldMatch == null ? void 0 : ldMatch[1]) == null ? void 0 : _a.replace(/\\\//g, "/");
       }
       if (!videoUrl) {
-        const vidMatch = html2.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || html2.match(/["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i);
-        if (vidMatch) {
-          videoUrl = vidMatch[1];
-        }
+        const direct = html2.match(/file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i) || html2.match(/["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i);
+        videoUrl = (direct == null ? void 0 : direct[1]) || null;
       }
-      if (videoUrl) {
+      if (videoUrl && /^https?:\/\//i.test(videoUrl)) {
+        const subtitles = processSubtitles(html2);
         return {
           url: videoUrl,
           quality: "1080p",
-          headers: headers2
+          headers: {
+            Referer: "https://closeload.filmmakinesi.to/",
+            "User-Agent": HEADERS["User-Agent"]
+          },
+          subtitles
         };
       }
       return null;
     } catch (err) {
-      console.error("[CloseLoad] Error extracting:", err.message);
+      console.error("[CloseLoad] Error extracting:", (err == null ? void 0 : err.message) || err);
       return null;
     }
   });
@@ -222,7 +276,7 @@ function extractCloseLoad(url2, referer2) {
 
 // src/patronFilmMakinesi/extractors/vidmoly.js
 var cheerio2 = __toESM(require("cheerio-without-node-native"));
-function unpackJS2(code) {
+function unpackJS(code) {
   try {
     const match = code.match(/}\('([^']*)',(\d+),(\d+),'([^']*)'\.split\('\|'\)/);
     if (!match)
@@ -297,7 +351,7 @@ function extractVidMoly(url2, referer2) {
       const scriptMatches = html2.match(/eval\(function\(p,a,c,k,e,?[d]?\).*?\)\)/g);
       if (scriptMatches) {
         for (let script of scriptMatches) {
-          const unpacked2 = unpackJS2(script);
+          const unpacked2 = unpackJS(script);
           const vidMatch = unpacked2.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || unpacked2.match(/file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
           if (vidMatch) {
             videoUrl = vidMatch[1];
