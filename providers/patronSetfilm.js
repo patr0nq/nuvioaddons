@@ -1,6 +1,6 @@
 /**
  * patronSetfilm - Built from src/patronSetfilm/
- * Generated: 2026-04-23T21:55:15.497Z
+ * Generated: 2026-04-23T22:06:22.400Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -79,9 +79,8 @@ var MAIN_URL = "https://www.setfilmizle.uk";
 var AJAX_URL = `${MAIN_URL}/wp-admin/admin-ajax.php`;
 var HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-  "Accept": "*/*",
-  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
-  "X-Requested-With": "XMLHttpRequest"
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
 };
 function fixUrl(url, baseUrl) {
   if (!url)
@@ -194,7 +193,8 @@ function getNonce() {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "Referer": referer
+          "Referer": referer,
+          "X-Requested-With": "XMLHttpRequest"
         },
         body: body.toString()
       });
@@ -225,7 +225,8 @@ function searchContent(query, nonce) {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Referer": MAIN_URL
+        "Referer": MAIN_URL,
+        "X-Requested-With": "XMLHttpRequest"
       },
       body: body.toString()
     });
@@ -256,7 +257,8 @@ function fetchVideoUrl(postId, playerName, partKey, nonce, referer) {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "Referer": referer
+          "Referer": referer,
+          "X-Requested-With": "XMLHttpRequest"
         },
         body: body.toString()
       });
@@ -285,8 +287,12 @@ function resolveFastPlay(url, referer) {
       }
       if (!streamUrl)
         return null;
+      let finalUrl = fixUrl(streamUrl, "https://fastplay.mom");
+      if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
+        finalUrl += finalUrl.includes("#") ? "" : "#.m3u8";
+      }
       return {
-        url: fixUrl(streamUrl, "https://fastplay.mom"),
+        url: finalUrl,
         quality: "Auto",
         headers: { "Referer": url }
       };
@@ -332,6 +338,7 @@ function extractStreams(tmdbId, mediaType, season, episode) {
       if (!trTitle && !origTitle)
         return [];
       const searchNonce = yield getNonce("search");
+      console.log(`[${PROVIDER_NAME}] Search Nonce: ${searchNonce}`);
       let results = yield searchContent(trTitle, searchNonce);
       if (!results.length && origTitle && origTitle !== trTitle) {
         results = yield searchContent(origTitle, searchNonce);
@@ -340,9 +347,7 @@ function extractStreams(tmdbId, mediaType, season, episode) {
         results = yield searchContent(shortTitle, searchNonce);
       }
       const q = normalizeTitle(trTitle || origTitle);
-      const match = results.find(
-        (item) => normalizeTitle(item.title) === q || normalizeTitle(item.title).includes(q)
-      ) || results[0];
+      const match = results.find((item) => normalizeTitle(item.title) === q) || results.find((item) => normalizeTitle(item.title).includes(q)) || results[0];
       if (!match) {
         console.warn(`[${PROVIDER_NAME}] Content not found`);
         return [];
@@ -356,8 +361,8 @@ function extractStreams(tmdbId, mediaType, season, episode) {
         $s("div#episodes ul.episodios li").each((_, el) => {
           const epTitle = $s(el).find("h4.episodiotitle a").text().trim();
           const epHref = $s(el).find("h4.episodiotitle a").attr("href");
-          const sMatch = epTitle.match(/([0-9]+)\.?\s*Sezon/i);
-          const eMatch = epTitle.match(/([0-9]+)\.?\s*Bölüm/i);
+          const sMatch = epTitle.match(/([0-9]+)\.?\s*(Sezon|Season)/i);
+          const eMatch = epTitle.match(/([0-9]+)\.?\s*(Bölüm|Episode)/i);
           if (sMatch && eMatch) {
             if (parseInt(sMatch[1]) == season && parseInt(eMatch[1]) == episode) {
               episodeUrl = fixUrl(epHref, MAIN_URL);
@@ -379,12 +384,17 @@ function extractStreams(tmdbId, mediaType, season, episode) {
         "turkcealtyazi": "Altyaz\u0131",
         "orijinal": "Orijinal"
       };
-      const playerElements = $("a[data-player-name]");
+      let playerElements = $("a[data-player-name]");
+      if (playerElements.length === 0) {
+        playerElements = $("nav.player a");
+      }
+      console.log(`[${PROVIDER_NAME}] Found ${playerElements.length} player elements`);
       const fetchPromises = [];
       playerElements.each((_, el) => {
         const postId = $(el).attr("data-post-id");
-        const playerName = $(el).attr("data-player-name");
+        const playerName = $(el).attr("data-player-name") || $(el).find("b").text().trim() || $(el).text().trim();
         const partKey = $(el).attr("data-part-key");
+        console.log(`[${PROVIDER_NAME}] Player: ${playerName} | ID: ${postId} | Key: ${partKey}`);
         if (postId) {
           fetchPromises.push((() => __async(this, null, function* () {
             const iframeUrl = yield fetchVideoUrl(postId, playerName, partKey, videoNonce, contentUrl);
@@ -432,10 +442,12 @@ function extractStreams(tmdbId, mediaType, season, episode) {
 function getStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
     try {
-      console.log(`[SetFilmIzle] Request: ${mediaType} ${tmdbId} S${season}E${episode}`);
-      return yield extractStreams(tmdbId, mediaType, season, episode);
+      console.log(`[SetFilmIzle] getStreams called for ${mediaType} ${tmdbId} S${season}E${episode}`);
+      const streams = yield extractStreams(tmdbId, mediaType, season, episode);
+      console.log(`[SetFilmIzle] Returning ${streams.length} streams`);
+      return streams;
     } catch (error) {
-      console.error(`[SetFilmIzle] Error: ${error.message}`);
+      console.error(`[SetFilmIzle] Error in getStreams: ${error.message}`);
       return [];
     }
   });
