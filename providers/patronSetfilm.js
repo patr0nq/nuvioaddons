@@ -1,6 +1,6 @@
 /**
  * patronSetfilm - Built from src/patronSetfilm/
- * Generated: 2026-04-23T21:48:06.820Z
+ * Generated: 2026-04-23T21:55:15.497Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -271,6 +271,59 @@ function fetchVideoUrl(postId, playerName, partKey, nonce, referer) {
     }
   });
 }
+function resolveFastPlay(url, referer) {
+  return __async(this, null, function* () {
+    try {
+      const html = yield fetchText(url, { headers: { "Referer": referer } });
+      const streamUrlMatch = html.match(/const\s+streamUrl\s*=\s*['"]([^'"]+)['"]/) || html.match(/streamUrl\s*=\s*['"]([^'"]+)['"]/);
+      const streamTypeMatch = html.match(/const\s+streamType\s*=\s*['"]([^'"]+)['"]/) || html.match(/streamType\s*=\s*['"]([^'"]+)['"]/);
+      let streamUrl = streamUrlMatch ? streamUrlMatch[1] : "";
+      if (!streamUrl && html.includes("file : streamUrl")) {
+        const manifestMatch = html.match(/['"](\/manifests\/[^'"]+)['"]/);
+        if (manifestMatch)
+          streamUrl = manifestMatch[1];
+      }
+      if (!streamUrl)
+        return null;
+      return {
+        url: fixUrl(streamUrl, "https://fastplay.mom"),
+        quality: "Auto",
+        headers: { "Referer": url }
+      };
+    } catch (e) {
+      console.error(`[FastPlay] Error: ${e.message}`);
+      return null;
+    }
+  });
+}
+function resolveSetPlay(url, referer) {
+  return __async(this, null, function* () {
+    try {
+      const html = yield fetchText(url, { headers: { "Referer": referer } });
+      const sourcesMatch = html.match(new RegExp("sources\\s*:\\s*\\[(.+?)\\]", "s"));
+      if (sourcesMatch) {
+        const fileMatch = sourcesMatch[1].match(/file\s*:\s*["']([^"']+)["']/);
+        if (fileMatch) {
+          return {
+            url: fileMatch[1],
+            quality: "Auto",
+            headers: { "Referer": url }
+          };
+        }
+      }
+    } catch (e) {
+    }
+    let finalUrl = url;
+    if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
+      finalUrl += finalUrl.includes("#") ? "" : "#.mkv";
+    }
+    return {
+      url: finalUrl,
+      quality: "Auto",
+      headers: { "Referer": referer }
+    };
+  });
+}
 function extractStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
     try {
@@ -338,17 +391,30 @@ function extractStreams(tmdbId, mediaType, season, episode) {
             if (iframeUrl) {
               const label = partLabels[partKey] || partKey || "";
               const title = [playerName, label].filter(Boolean).join(" | ");
-              let finalUrl = iframeUrl;
-              if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
-                finalUrl += finalUrl.includes("#") ? "" : "#.mkv";
+              let resolved = null;
+              if (iframeUrl.includes("fastplay.mom")) {
+                resolved = yield resolveFastPlay(iframeUrl, contentUrl);
+              } else if (iframeUrl.includes("setplay")) {
+                resolved = yield resolveSetPlay(iframeUrl, contentUrl);
               }
-              streams.push({
-                name: PROVIDER_NAME,
-                title,
-                url: finalUrl,
-                quality: "Auto",
-                headers: { "Referer": contentUrl }
-              });
+              if (resolved) {
+                streams.push(__spreadValues({
+                  name: PROVIDER_NAME,
+                  title
+                }, resolved));
+              } else {
+                let finalUrl = iframeUrl;
+                if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
+                  finalUrl += finalUrl.includes("#") ? "" : "#.mkv";
+                }
+                streams.push({
+                  name: PROVIDER_NAME,
+                  title,
+                  url: finalUrl,
+                  quality: "Auto",
+                  headers: { "Referer": contentUrl }
+                });
+              }
             }
           }))());
         }
