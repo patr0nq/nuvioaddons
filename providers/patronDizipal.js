@@ -1,6 +1,6 @@
 /**
  * patronDizipal - Built from src/patronDizipal/
- * Generated: 2026-04-23T22:45:32.658Z
+ * Generated: 2026-04-23T22:50:55.236Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -167,11 +167,9 @@ function getTmdbTitle(tmdbId, mediaType) {
             origTitle = matched;
         }
       }
-      let shortTitle = "";
-      if (origTitle && (origTitle.includes(":") || origTitle.toLowerCase().includes(" and "))) {
-        shortTitle = origTitle.split(":")[0].split(/ and /i)[0].trim();
-      }
-      return { trTitle: title, origTitle, shortTitle };
+      const yearMatch = html.match(/\((\d{4})\)/);
+      const year = yearMatch ? parseInt(yearMatch[1]) : null;
+      return { trTitle: title, origTitle, shortTitle, year };
     } catch (error) {
       console.error(`[TMDB] Baslik hatasi: ${error.message}`);
       return { trTitle: "", origTitle: "", shortTitle: "" };
@@ -297,13 +295,12 @@ function getStreams(tmdbId, type, season, episode) {
   return __async(this, null, function* () {
     try {
       console.log(`[Dizipal] getStreams called for ${type} ${tmdbId} S${season}E${episode}`);
-      const { trTitle, origTitle, shortTitle } = yield getTmdbTitle(tmdbId, type);
-      console.log(`[Dizipal] TMDB: ${tmdbId} | TR: ${trTitle} | ORIG: ${origTitle}`);
+      const { trTitle, origTitle, shortTitle: shortTitle2, year } = yield getTmdbTitle(tmdbId, type);
+      console.log(`[Dizipal] TMDB: ${tmdbId} | TR: ${trTitle} | ORIG: ${origTitle} | YEAR: ${year}`);
       if (!trTitle && !origTitle) {
         return [];
       }
-      const queries = [trTitle, origTitle, shortTitle].filter((q) => q && q.length > 1);
-      let searchResults = null;
+      const queries = [trTitle, origTitle, shortTitle2].filter((q) => q && q.length > 1);
       let match = null;
       const matchType = type === "movie" ? "Film" : "Dizi";
       for (const query of queries) {
@@ -320,13 +317,16 @@ function getStreams(tmdbId, type, season, episode) {
             match = results.results.find((r) => {
               const rTitle = (r.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
               const rType = r.type;
+              const rYear = r.year;
               if (rType !== matchType)
                 return false;
               const cleanTr = (trTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
               const cleanOrig = (origTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-              const cleanShort = (shortTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const cleanShort = (shortTitle2 || "").toLowerCase().replace(/[^a-z0-9]/g, "");
               const cleanQuery = query.toLowerCase().replace(/[^a-z0-9]/g, "");
-              return rTitle === cleanTr || rTitle === cleanOrig || rTitle === cleanShort || rTitle === cleanQuery || rTitle.includes(cleanQuery) || cleanQuery.includes(rTitle);
+              const titleMatches = rTitle === cleanTr || rTitle === cleanOrig || rTitle === cleanShort || rTitle === cleanQuery || rTitle.includes(cleanQuery) || cleanQuery.includes(rTitle);
+              const yearMatches = !year || !rYear || Math.abs(year - rYear) <= 1;
+              return titleMatches && yearMatches;
             });
             if (match)
               break;
