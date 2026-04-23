@@ -1,6 +1,6 @@
 /**
  * patronSinewix - Built from src/patronSinewix/
- * Generated: 2026-04-23T21:31:55.562Z
+ * Generated: 2026-04-23T21:37:22.851Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -190,24 +190,31 @@ function extractStreams(tmdbId, mediaType, season, episode) {
       if (!trTitle && !origTitle)
         return [];
       let results = yield searchContent(trTitle);
+      console.log(`[${PROVIDER_NAME}] Search "${trTitle}" found ${results.length} results`);
       if (!results.length && origTitle && origTitle !== trTitle) {
         results = yield searchContent(origTitle);
+        console.log(`[${PROVIDER_NAME}] Search "${origTitle}" found ${results.length} results`);
       }
       if (!results.length && shortTitle) {
         results = yield searchContent(shortTitle);
+        console.log(`[${PROVIDER_NAME}] Search "${shortTitle}" found ${results.length} results`);
       }
       const q = normalizeTitle(trTitle || origTitle);
       const match = results.find(
+        (item) => (normalizeTitle(item.name) === q || normalizeTitle(item.title) === q || normalizeTitle(item.original_name) === q) && (mediaType === "movie" ? item.type === "movie" : item.type === "serie")
+      ) || results.find(
         (item) => normalizeTitle(item.name) === q || normalizeTitle(item.title) === q || normalizeTitle(item.original_name) === q
       ) || results[0];
       if (!match) {
-        console.warn(`[${PROVIDER_NAME}] Icerik bulunamadi`);
+        console.warn(`[${PROVIDER_NAME}] Icerik eslesmedi`);
         return [];
       }
+      console.log(`[${PROVIDER_NAME}] Matched: ${match.name || match.title} (ID: ${match.id})`);
       const id = match.id;
       const isMovie = mediaType === "movie";
       const typePath = isMovie ? "media" : "series";
-      const detailUrl = `${BASE_URL}/public/api/${typePath}/show/${id}/${API_TOKEN}`;
+      const method = isMovie ? "detail" : "show";
+      const detailUrl = `${BASE_URL}/public/api/${typePath}/${method}/${id}/${API_TOKEN}`;
       const detailData = yield fetchJSON(detailUrl);
       const streams = [];
       if (isMovie) {
