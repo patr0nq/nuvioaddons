@@ -146,6 +146,31 @@
       "limited": false,
       "disabledPlatforms": [],
       "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-sinewix",
+      "name": "SineWix",
+      "description": "SineWix tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
+      "version": "1.0.0",
+      "author": "patr0n",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/patronSinewix.js",
+      "enabled": true,
+      "logo": "https://ydfvfdizipanel.ru/favicon.ico",
+      "contentLanguage": [
+        "tr"
+      ],
+      "formats": [
+        "m3u8",
+        "mp4",
+        "mkv"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
     }
   ]
 }
