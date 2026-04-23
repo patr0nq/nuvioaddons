@@ -1,6 +1,6 @@
 /**
  * patronSetfilm - Built from src/patronSetfilm/
- * Generated: 2026-04-23T22:06:22.400Z
+ * Generated: 2026-04-23T22:12:07.733Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -302,10 +302,52 @@ function resolveFastPlay(url, referer) {
     }
   });
 }
+function resolveSetPrime(url, referer) {
+  return __async(this, null, function* () {
+    try {
+      const cleanUrl = url.split("&partKey=")[0].split("?partKey=")[0];
+      const postUrl = cleanUrl.replace("embed?i=", "embed/get?i=");
+      const text = yield fetchText(postUrl, {
+        method: "POST",
+        headers: {
+          "Referer": cleanUrl,
+          "X-Requested-With": "XMLHttpRequest",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        }
+      });
+      let suffix = null;
+      try {
+        const json = JSON.parse(text);
+        if (json && json.Links && json.Links.length > 0) {
+          suffix = json.Links[0];
+        }
+      } catch (e) {
+        const linkMatch = text.match(/Links":\["([^"\]]+)"/);
+        if (linkMatch)
+          suffix = linkMatch[1];
+      }
+      if (suffix) {
+        return {
+          url: `https://setplay.site${suffix}`,
+          quality: "Auto",
+          headers: { "Referer": cleanUrl }
+        };
+      }
+    } catch (e) {
+      console.error(`[SetPrime] Error: ${e.message}`);
+    }
+    return null;
+  });
+}
 function resolveSetPlay(url, referer) {
   return __async(this, null, function* () {
     try {
-      const html = yield fetchText(url, { headers: { "Referer": referer } });
+      const html = yield fetchText(url, {
+        headers: {
+          "Referer": referer || "https://www.setfilmizle.uk/",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        }
+      });
       const sourcesMatch = html.match(new RegExp("sources\\s*:\\s*\\[(.+?)\\]", "s"));
       if (sourcesMatch) {
         const fileMatch = sourcesMatch[1].match(/file\s*:\s*["']([^"']+)["']/);
@@ -317,7 +359,28 @@ function resolveSetPlay(url, referer) {
           };
         }
       }
+      const m3u8Match = html.match(/["'](https?:\/\/[^"']+\.(m3u8|mp4|mkv)[^"']*)["']/i);
+      if (m3u8Match) {
+        return {
+          url: m3u8Match[1],
+          quality: "Auto",
+          headers: { "Referer": url }
+        };
+      }
+      if (html.includes("player_base_url")) {
+        const manifestMatch = html.match(/["'](\/manifests\/[^"']+)["']/);
+        if (manifestMatch) {
+          const baseUrlMatch = html.match(/player_base_url\s*=\s*["']([^"']+)["']/);
+          const baseUrl = baseUrlMatch ? baseUrlMatch[1] : "https://setplay.shop/player";
+          return {
+            url: fixUrl(manifestMatch[1], baseUrl) + "#.m3u8",
+            quality: "Auto",
+            headers: { "Referer": url }
+          };
+        }
+      }
     } catch (e) {
+      console.error(`[SetPlay] Error: ${e.message}`);
     }
     let finalUrl = url;
     if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
@@ -402,9 +465,13 @@ function extractStreams(tmdbId, mediaType, season, episode) {
               const label = partLabels[partKey] || partKey || "";
               const title = [playerName, label].filter(Boolean).join(" | ");
               let resolved = null;
-              if (iframeUrl.includes("fastplay.mom")) {
+              const lowerIframe = iframeUrl.toLowerCase();
+              if (lowerIframe.includes("fastplay.mom")) {
                 resolved = yield resolveFastPlay(iframeUrl, contentUrl);
-              } else if (iframeUrl.includes("setplay")) {
+              } else if (lowerIframe.includes("setprime") || lowerIframe.includes("stplay.cfd")) {
+                const primeUrl = iframeUrl.includes("partKey=") ? iframeUrl : `${iframeUrl}${iframeUrl.includes("?") ? "&" : "?"}partKey=${partKey || ""}`;
+                resolved = yield resolveSetPrime(primeUrl, contentUrl);
+              } else if (lowerIframe.includes("setplay")) {
                 resolved = yield resolveSetPlay(iframeUrl, contentUrl);
               }
               if (resolved) {
@@ -414,6 +481,9 @@ function extractStreams(tmdbId, mediaType, season, episode) {
                 }, resolved));
               } else {
                 let finalUrl = iframeUrl;
+                if (lowerIframe.includes("stplay.cfd") && !lowerIframe.includes("partkey=")) {
+                  finalUrl += `${finalUrl.includes("?") ? "&" : "?"}partKey=${partKey || ""}`;
+                }
                 if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
                   finalUrl += finalUrl.includes("#") ? "" : "#.mkv";
                 }
