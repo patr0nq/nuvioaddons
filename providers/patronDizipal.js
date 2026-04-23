@@ -1,6 +1,6 @@
 /**
  * patronDizipal - Built from src/patronDizipal/
- * Generated: 2026-04-23T22:38:29.079Z
+ * Generated: 2026-04-23T22:45:32.658Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -302,30 +302,41 @@ function getStreams(tmdbId, type, season, episode) {
       if (!trTitle && !origTitle) {
         return [];
       }
-      const searchQuery = trTitle || origTitle;
-      const searchUrl = `${MAIN_URL}/ajax-search?q=${encodeURIComponent(searchQuery)}`;
-      const searchResults = yield fetchJSON(searchUrl, {
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "Referer": `${MAIN_URL}/`
-        }
-      });
-      if (!searchResults || !searchResults.success || !searchResults.results) {
-        console.log("[Dizipal] No search results");
-        return [];
-      }
+      const queries = [trTitle, origTitle, shortTitle].filter((q) => q && q.length > 1);
+      let searchResults = null;
+      let match = null;
       const matchType = type === "movie" ? "Film" : "Dizi";
-      let match = searchResults.results.find((r) => {
-        const rTitle = (r.title || "").toLowerCase();
-        const rType = r.type;
-        if (rType !== matchType)
-          return false;
-        const targetTitle = (trTitle || "").toLowerCase();
-        const targetOrig = (origTitle || "").toLowerCase();
-        return rTitle === targetTitle || rTitle === targetOrig || targetTitle.includes(rTitle) || rTitle.includes(targetTitle);
-      });
+      for (const query of queries) {
+        console.log(`[Dizipal] Searching for: ${query}`);
+        const searchUrl = `${MAIN_URL}/ajax-search?q=${encodeURIComponent(query)}`;
+        try {
+          const results = yield fetchJSON(searchUrl, {
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              "Referer": `${MAIN_URL}/`
+            }
+          });
+          if (results && results.success && results.results) {
+            match = results.results.find((r) => {
+              const rTitle = (r.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const rType = r.type;
+              if (rType !== matchType)
+                return false;
+              const cleanTr = (trTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const cleanOrig = (origTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const cleanShort = (shortTitle || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const cleanQuery = query.toLowerCase().replace(/[^a-z0-9]/g, "");
+              return rTitle === cleanTr || rTitle === cleanOrig || rTitle === cleanShort || rTitle === cleanQuery || rTitle.includes(cleanQuery) || cleanQuery.includes(rTitle);
+            });
+            if (match)
+              break;
+          }
+        } catch (err) {
+          console.error(`[Dizipal] Search error for ${query}: ${err.message}`);
+        }
+      }
       if (!match) {
-        console.log("[Dizipal] No matching content found");
+        console.log("[Dizipal] No matching content found after all queries");
         return [];
       }
       console.log(`[Dizipal] Match found: ${match.title} -> ${match.url}`);
