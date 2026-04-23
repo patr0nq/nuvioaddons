@@ -149,7 +149,7 @@
     },
     {
       "id": "patron-sinewix",
-      "name": "SineWix",
+      "name": "patronSineWix",
       "description": "SineWix tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
       "version": "1.0.0",
       "author": "patr0n",
