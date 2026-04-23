@@ -196,6 +196,31 @@
       "limited": false,
       "disabledPlatforms": [],
       "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-dizipal",
+      "name": "patronDizipal",
+      "description": "Dizipal tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
+      "version": "1.0.0",
+      "author": "patr0n",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/patronDizipal.js",
+      "enabled": true,
+      "logo": "https://www.google.com/s2/favicons?domain=dizipal2045.com&sz=64",
+      "contentLanguage": [
+        "tr"
+      ],
+      "formats": [
+        "m3u8",
+        "mp4",
+        "mkv"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
     }
   ]
 }
