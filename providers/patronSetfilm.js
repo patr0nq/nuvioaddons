@@ -1,6 +1,6 @@
 /**
  * patronSetfilm - Built from src/patronSetfilm/
- * Generated: 2026-04-23T22:21:19.602Z
+ * Generated: 2026-04-23T22:28:53.864Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -341,7 +341,6 @@ function resolveSetPrime(url, referer) {
 }
 function resolveSetPlay(url, referer) {
   return __async(this, null, function* () {
-    var _a, _b;
     try {
       const html = yield fetchText(url, {
         headers: {
@@ -353,21 +352,16 @@ function resolveSetPlay(url, referer) {
       if (firePlayerMatch) {
         try {
           const data = JSON.parse(firePlayerMatch[1]);
-          const source = (_b = (_a = data.videoData) == null ? void 0 : _a.videoSources) == null ? void 0 : _b[0];
-          if (source && source.file) {
-            let fileUrl = source.file;
-            const videoServer = data.videoServer;
-            const hostList = data.hostList || {};
-            if (videoServer && hostList[videoServer] && hostList[videoServer].length > 0) {
-              const host = hostList[videoServer][0];
-              fileUrl = fileUrl.replace(`https://${videoServer}/`, `https://${host}/`);
-              fileUrl = fileUrl.replace(`http://${videoServer}/`, `http://${host}/`);
-            }
-            if (!/\.(m3u8|mp4|mkv)/i.test(fileUrl)) {
-              fileUrl += fileUrl.includes("#") ? "" : "#.m3u8";
+          const videoUrl = data.videoUrl;
+          const videoServer = data.videoServer || "1";
+          if (videoUrl) {
+            const baseUrl = new URL(url).origin;
+            let m3uLink = `${baseUrl}${videoUrl.replace(/\\\//g, "/")}?s=${videoServer}`;
+            if (!/\.(m3u8|mp4|mkv)/i.test(m3uLink) && !m3uLink.includes("#")) {
+              m3uLink += "#.m3u8";
             }
             return {
-              url: fileUrl,
+              url: m3uLink,
               quality: "Auto",
               headers: { "Referer": url }
             };
