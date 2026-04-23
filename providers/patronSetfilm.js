@@ -1,6 +1,6 @@
 /**
  * patronSetfilm - Built from src/patronSetfilm/
- * Generated: 2026-04-23T22:12:07.733Z
+ * Generated: 2026-04-23T22:21:19.602Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -341,6 +341,7 @@ function resolveSetPrime(url, referer) {
 }
 function resolveSetPlay(url, referer) {
   return __async(this, null, function* () {
+    var _a, _b;
     try {
       const html = yield fetchText(url, {
         headers: {
@@ -348,6 +349,33 @@ function resolveSetPlay(url, referer) {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         }
       });
+      const firePlayerMatch = html.match(/FirePlayer\s*\(\s*[^,]+,\s*(\{[\s\S]+?\})\s*,\s*(?:true|false)\s*\)/);
+      if (firePlayerMatch) {
+        try {
+          const data = JSON.parse(firePlayerMatch[1]);
+          const source = (_b = (_a = data.videoData) == null ? void 0 : _a.videoSources) == null ? void 0 : _b[0];
+          if (source && source.file) {
+            let fileUrl = source.file;
+            const videoServer = data.videoServer;
+            const hostList = data.hostList || {};
+            if (videoServer && hostList[videoServer] && hostList[videoServer].length > 0) {
+              const host = hostList[videoServer][0];
+              fileUrl = fileUrl.replace(`https://${videoServer}/`, `https://${host}/`);
+              fileUrl = fileUrl.replace(`http://${videoServer}/`, `http://${host}/`);
+            }
+            if (!/\.(m3u8|mp4|mkv)/i.test(fileUrl)) {
+              fileUrl += fileUrl.includes("#") ? "" : "#.m3u8";
+            }
+            return {
+              url: fileUrl,
+              quality: "Auto",
+              headers: { "Referer": url }
+            };
+          }
+        } catch (e) {
+          console.error(`[SetPlay] JSON parse error: ${e.message}`);
+        }
+      }
       const sourcesMatch = html.match(new RegExp("sources\\s*:\\s*\\[(.+?)\\]", "s"));
       if (sourcesMatch) {
         const fileMatch = sourcesMatch[1].match(/file\s*:\s*["']([^"']+)["']/);
