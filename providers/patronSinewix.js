@@ -1,6 +1,6 @@
 /**
  * patronSinewix - Built from src/patronSinewix/
- * Generated: 2026-04-23T21:48:06.834Z
+ * Generated: 2026-04-27T21:47:08.002Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -46,6 +46,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -70,7 +74,9 @@ var __async = (__this, __arguments, generator) => {
 // src/patronSinewix/index.js
 var patronSinewix_exports = {};
 __export(patronSinewix_exports, {
-  getStreams: () => getStreams
+  getMainPage: () => getMainPage,
+  getStreams: () => getStreams,
+  search: () => search
 });
 module.exports = __toCommonJS(patronSinewix_exports);
 
@@ -97,60 +103,72 @@ function fetchJSON(_0) {
 
 // src/patronSinewix/tmdb.js
 var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
+var TMDB_SCRAPE_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+};
+function decodeHtml(text) {
+  return (text || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#039;/g, "'");
+}
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
-      let decodeHtml = function(text) {
-        return (text || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#039;/g, "'");
-      };
       const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
-      const response = yield fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+      const scrapeUrl = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
+      console.log(`[SineWix] Scraping TMDB: ${scrapeUrl}`);
+      const response = yield fetch(scrapeUrl, { headers: TMDB_SCRAPE_HEADERS });
+      let trTitle = "";
+      let origTitle = "";
+      let year = "";
+      if (response.ok) {
+        const html = yield response.text();
+        const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
+        if (ogMatch) {
+          trTitle = decodeHtml(ogMatch[1]).split("(")[0].trim();
         }
-      });
-      if (!response.ok) {
-        throw new Error(`TMDB HTML fetch hatasi: ${response.status}`);
-      }
-      const html = yield response.text();
-      let title = "";
-      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
-      if (ogMatch) {
-        title = decodeHtml(ogMatch[1]).split("(")[0].trim();
-      } else {
-        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
-        if (titleMatch) {
-          title = decodeHtml(titleMatch[1]).split("(")[0].split("\u2014")[0].split("\xE2\u20AC\u201D")[0].trim();
-        }
-      }
-      const $ = import_cheerio_without_node_native.default.load(html);
-      let origTitle = title;
-      $("section.facts p").each((_, el) => {
-        const text = $(el).text();
-        if (text.includes("Orijinal Ba\u015Fl\u0131k") || text.includes("Original Title")) {
-          const found = text.replace("Orijinal Ba\u015Fl\u0131k", "").replace("Original Title", "").trim();
-          if (found)
-            origTitle = decodeHtml(found);
-        }
-      });
-      if (origTitle === title) {
         const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
         if (origMatch) {
-          const matched = decodeHtml(origMatch[1]).replace("Orijinal Adi", "").replace("Orijinal Ad\u0131", "").trim();
-          if (matched)
-            origTitle = matched;
+          origTitle = decodeHtml(origMatch[1]).trim();
+        }
+        const yearMatch = html.match(/\((\d{4})\)/);
+        if (yearMatch) {
+          year = yearMatch[1];
+        }
+        if (!origTitle) {
+          const $ = import_cheerio_without_node_native.default.load(html);
+          $("section.facts p").each((_, el) => {
+            const text = $(el).text();
+            if (text.includes("Orijinal Ba\u015Fl\u0131k") || text.includes("Original Title")) {
+              origTitle = text.replace("Orijinal Ba\u015Fl\u0131k", "").replace("Original Title", "").trim();
+            }
+          });
+        }
+      }
+      if (!trTitle || !origTitle) {
+        console.log(`[SineWix] TMDB Scrape failed or partial, using API fallback...`);
+        const apiKey = "500330721680edb6d5f7f12ba7cd9023";
+        const apiUrl = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${apiKey}&language=tr-TR`;
+        const apiRes = yield fetch(apiUrl);
+        if (apiRes.ok) {
+          const data = yield apiRes.json();
+          trTitle = data.title || data.name || trTitle;
+          origTitle = data.original_title || data.original_name || origTitle;
+          year = (data.release_date || data.first_air_date || year).substring(0, 4);
         }
       }
       let shortTitle = "";
       if (origTitle && (origTitle.includes(":") || origTitle.toLowerCase().includes(" and "))) {
         shortTitle = origTitle.split(":")[0].split(/ and /i)[0].trim();
       }
-      return { trTitle: title, origTitle, shortTitle };
+      return {
+        trTitle: trTitle || origTitle,
+        origTitle: origTitle || trTitle,
+        shortTitle,
+        year
+      };
     } catch (error) {
-      console.error(`[SineWix] TMDB baslik hatasi: ${error.message}`);
-      return { trTitle: "", origTitle: "", shortTitle: "" };
+      console.error(`[SineWix] TMDB title fetch error: ${error.message}`);
+      return { trTitle: "", origTitle: "", shortTitle: "", year: "" };
     }
   });
 }
@@ -167,20 +185,80 @@ function searchContent(query) {
     return data.search || [];
   });
 }
-function buildStream(video, sourceName) {
-  let url = video.link || video.youtubelink || video.embed;
-  if (!url)
-    return null;
-  if (!/\.(m3u8|mp4|mkv)/i.test(url)) {
-    url += url.includes("#") ? "" : "#.mkv";
+var MediafireExtractor = class {
+  static canHandleUrl(url) {
+    return url.includes("mediafire.com");
   }
-  return {
-    name: PROVIDER_NAME,
-    title: `${video.server || "Server"} - ${video.lang || "TR"}`,
-    url,
-    quality: "Auto",
-    headers: HEADERS
-  };
+  static extract(url, referer = null) {
+    return __async(this, null, function* () {
+      try {
+        console.log(`[Mediafire] Extracting: ${url}`);
+        const headers = {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        };
+        if (referer)
+          headers.Referer = referer;
+        const response = yield fetch(url, { headers });
+        const html = yield response.text();
+        const downloadMatch = html.match(/id="downloadButton"\s+href="([^"]+)"/i) || html.match(/href="([^"]+)"\s+id="downloadButton"/i);
+        if (downloadMatch) {
+          const videoUrl = downloadMatch[1];
+          console.log(`[Mediafire] Extracted direct link: ${videoUrl}`);
+          const labelMatch = html.match(/class="dl-btn-label"[^>]*>([^<]+)</i);
+          let quality = "Auto";
+          if (labelMatch) {
+            const label = labelMatch[1].trim();
+            const qMatch = label.match(/(\d{3,4})p/i);
+            if (qMatch)
+              quality = qMatch[1] + "p";
+          }
+          return {
+            url: videoUrl,
+            quality,
+            headers: {
+              "Referer": url,
+              "User-Agent": headers["User-Agent"]
+            }
+          };
+        }
+        return null;
+      } catch (e) {
+        console.error(`[Mediafire] Extract error: ${e.message}`);
+        return null;
+      }
+    });
+  }
+};
+__publicField(MediafireExtractor, "name", "Mediafire");
+function buildStream(video, sourceName) {
+  return __async(this, null, function* () {
+    let url = video.link || video.youtubelink || video.embed;
+    if (!url)
+      return null;
+    if (MediafireExtractor.canHandleUrl(url)) {
+      const extracted = yield MediafireExtractor.extract(url);
+      if (extracted) {
+        return {
+          name: PROVIDER_NAME,
+          title: `${video.server || "Mediafire"} - ${video.lang || "TR"}`,
+          url: extracted.url,
+          quality: extracted.quality || "Auto",
+          headers: extracted.headers || HEADERS
+        };
+      }
+    }
+    let finalUrl = url;
+    if (!/\.(m3u8|mp4|mkv)/i.test(finalUrl)) {
+      finalUrl += finalUrl.includes("#") ? "" : "#.mkv";
+    }
+    return {
+      name: PROVIDER_NAME,
+      title: `${video.server || "Server"} - ${video.lang || "TR"}`,
+      url: finalUrl,
+      quality: "Auto",
+      headers: HEADERS
+    };
+  });
 }
 function extractStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
@@ -219,11 +297,11 @@ function extractStreams(tmdbId, mediaType, season, episode) {
       const streams = [];
       if (isMovie) {
         const videos = detailData.videos || [];
-        videos.forEach((v) => {
-          const s = buildStream(v, PROVIDER_NAME);
+        for (const v of videos) {
+          const s = yield buildStream(v, PROVIDER_NAME);
           if (s)
             streams.push(s);
-        });
+        }
       } else {
         const seasons = detailData.seasons || [];
         const targetSeason = seasons.find((s) => s.season_number == season);
@@ -232,11 +310,11 @@ function extractStreams(tmdbId, mediaType, season, episode) {
           const targetEpisode = episodes.find((e) => e.episode_number == episode);
           if (targetEpisode) {
             const videos = targetEpisode.videos || [];
-            videos.forEach((v) => {
-              const s = buildStream(v, PROVIDER_NAME);
+            for (const v of videos) {
+              const s = yield buildStream(v, PROVIDER_NAME);
               if (s)
                 streams.push(s);
-            });
+            }
           }
         }
       }
@@ -256,6 +334,54 @@ function getStreams(tmdbId, mediaType, season, episode) {
       return yield extractStreams(tmdbId, mediaType, season, episode);
     } catch (error) {
       console.error(`[SineWix] Error: ${error.message}`);
+      return [];
+    }
+  });
+}
+function search(query) {
+  return __async(this, null, function* () {
+    try {
+      const results = yield searchContent(query);
+      return results.map((item) => ({
+        id: item.id.toString(),
+        title: item.name || item.title,
+        type: item.type === "serie" ? "tv" : "movie",
+        poster: item.poster_path,
+        year: item.release_date ? item.release_date.split("-")[0] : ""
+      }));
+    } catch (error) {
+      console.error(`[SineWix] Search Error: ${error.message}`);
+      return [];
+    }
+  });
+}
+function getMainPage() {
+  return __async(this, null, function* () {
+    try {
+      const categories = [
+        { name: "Pop\xFCler Filmler", url: `${BASE_URL}/public/api/movies/popular/${API_TOKEN}` },
+        { name: "Yeni Filmler", url: `${BASE_URL}/public/api/movies/latest/${API_TOKEN}` },
+        { name: "Pop\xFCler Diziler", url: `${BASE_URL}/public/api/series/popular/${API_TOKEN}` },
+        { name: "Yeni Diziler", url: `${BASE_URL}/public/api/series/latest/${API_TOKEN}` }
+      ];
+      const pages = yield Promise.all(categories.map((cat) => __async(this, null, function* () {
+        try {
+          const data = yield fetchJSON(cat.url);
+          const items = (data.movies || data.series || []).map((item) => ({
+            id: item.id.toString(),
+            title: item.name || item.title,
+            type: item.type === "serie" ? "tv" : "movie",
+            poster: item.poster_path,
+            year: item.release_date ? item.release_date.split("-")[0] : ""
+          }));
+          return { name: cat.name, items };
+        } catch (e) {
+          return { name: cat.name, items: [] };
+        }
+      })));
+      return pages;
+    } catch (error) {
+      console.error(`[SineWix] Main Page Error: ${error.message}`);
       return [];
     }
   });
