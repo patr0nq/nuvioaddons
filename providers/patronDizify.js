@@ -1,13 +1,15 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T20:44:13.619Z
+ * Generated: 2026-04-27T20:50:55.329Z
  */
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
@@ -35,6 +37,14 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __publicField = (obj, key, value) => {
   __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
@@ -210,6 +220,7 @@ function getTmdbCredits(tmdbId, itemType) {
 
 // src/patronDizify/index.js
 var import_cheerio = require("cheerio");
+var import_crypto_js = __toESM(require("crypto-js"));
 var VidMolyExtractor = class {
   static canHandleUrl(url) {
     return url.includes("vidmoly") || this.supportedDomains.some((domain) => url.includes(domain));
@@ -383,87 +394,8 @@ var DosyaLoadExtractor = class {
   static canHandleUrl(url) {
     return this.supportedDomains.some((domain) => url.includes(domain));
   }
-  static decodeBase64Latin1(input) {
-    try {
-      if (typeof atob === "function")
-        return atob(input);
-      return Buffer.from(input, "base64").toString("latin1");
-    } catch (e) {
-      return input;
-    }
-  }
-  static rot13(str) {
-    return str.replace(/[a-zA-Z]/g, (c) => {
-      const base = c <= "Z" ? 65 : 97;
-      return String.fromCharCode((c.charCodeAt(0) - base + 13) % 26 + base);
-    });
-  }
-  static decryptNative(html) {
-    try {
-      const scriptBlockMatch = html.match(/<script[^>]*>([\s\S]*?dc_[a-zA-Z0-9_]+\([\s\S]*?)<\/script>/i);
-      const scriptContent = scriptBlockMatch == null ? void 0 : scriptBlockMatch[1];
-      if (!scriptContent)
-        return null;
-      const arrayMatch = scriptContent.match(/\(\[((?:"[^"]+",?\s*)+)\]\)/);
-      if (!(arrayMatch == null ? void 0 : arrayMatch[1]))
-        return null;
-      const parts = arrayMatch[1].split(",").map((s) => s.trim().replace(/^"|"$/g, "").replace(/\\\//g, "/"));
-      const moduloMatch = scriptContent.match(/(\d+)\s*%\s*\(i\s*\+\s*(\d+)\)/);
-      const magicNum = (moduloMatch == null ? void 0 : moduloMatch[1]) ? Number(moduloMatch[1]) : 399756995;
-      const magicOffset = (moduloMatch == null ? void 0 : moduloMatch[2]) ? Number(moduloMatch[2]) : 5;
-      const functionBodyMatch = scriptContent.match(/function\s+dc_[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{([\s\S]*?)return\s+unmix;/);
-      const functionBody = (functionBodyMatch == null ? void 0 : functionBodyMatch[1]) || scriptContent;
-      const reverseIdx = functionBody.indexOf(".reverse()");
-      const atobIdx = functionBody.indexOf("atob(");
-      const rot13Idx = functionBody.search(/\.replace\(\s*\/\[a-zA-Z\]\/g/);
-      const operations = [
-        { idx: reverseIdx, op: "reverse" },
-        { idx: atobIdx, op: "atob" },
-        { idx: rot13Idx, op: "rot13" }
-      ].filter((x) => x.idx !== -1).sort((a, b) => a.idx - b.idx);
-      let result = parts.join("");
-      for (const { op } of operations) {
-        if (op === "reverse")
-          result = result.split("").reverse().join("");
-        else if (op === "atob")
-          result = this.decodeBase64Latin1(result);
-        else if (op === "rot13")
-          result = this.rot13(result);
-      }
-      let unmix = "";
-      for (let i = 0; i < result.length; i++) {
-        const charCode = result.charCodeAt(i);
-        const decryptedCode = (charCode - magicNum % (i + magicOffset) + 256) % 256;
-        unmix += String.fromCharCode(decryptedCode);
-      }
-      return unmix;
-    } catch (e) {
-      return null;
-    }
-  }
-  static processSubtitles(html) {
-    var _a, _b, _c;
-    const subtitles = [];
-    try {
-      const tracksMatch = html.match(/tracks\s*:\s*(\[[\s\S]*?\])/i);
-      if (!(tracksMatch == null ? void 0 : tracksMatch[1]))
-        return subtitles;
-      const tracksJson = tracksMatch[1];
-      const blocks = tracksJson.match(/\{[^}]*\}/g) || [];
-      for (const block of blocks) {
-        const file = (_b = (_a = block.match(/"file"\s*:\s*"([^"]+)"/)) == null ? void 0 : _a[1]) == null ? void 0 : _b.replace(/\\\//g, "/");
-        const label = ((_c = block.match(/"label"\s*:\s*"([^"]+)"/)) == null ? void 0 : _c[1]) || "Altyaz\u0131";
-        if (file && /^https?:\/\//i.test(file)) {
-          subtitles.push({ label, file });
-        }
-      }
-    } catch (e) {
-    }
-    return subtitles;
-  }
   static extract(embedUrl, referer = null) {
     return __async(this, null, function* () {
-      var _a;
       try {
         console.log(`[DosyaLoad] Extracting: ${embedUrl}`);
         const headers = {
@@ -472,18 +404,58 @@ var DosyaLoadExtractor = class {
         };
         const response = yield fetch(embedUrl, { headers });
         const html = yield response.text();
-        let videoUrl = this.decryptNative(html);
-        if (!videoUrl) {
-          const ldMatch = html.match(/"contentUrl"\s*:\s*"([^"]+)"/i);
-          videoUrl = (_a = ldMatch == null ? void 0 : ldMatch[1]) == null ? void 0 : _a.replace(/\\\//g, "/");
+        const bePlayerMatch = html.match(/bePlayer\('([^']*)',\s*'([^']*)'/);
+        if (!bePlayerMatch) {
+          console.log(`[DosyaLoad] bePlayer payload not found`);
+          return null;
         }
-        if (!videoUrl) {
-          const direct = html.match(/file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i) || html.match(/["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i);
-          videoUrl = (direct == null ? void 0 : direct[1]) || null;
+        const hash = bePlayerMatch[1];
+        const set = bePlayerMatch[2];
+        const JsonFormatter = {
+          stringify: function(cipherParams) {
+            var j = { ct: cipherParams.ciphertext.toString(import_crypto_js.default.enc.Base64) };
+            if (cipherParams.iv)
+              j.iv = cipherParams.iv.toString();
+            if (cipherParams.salt)
+              j.s = cipherParams.salt.toString();
+            return JSON.stringify(j);
+          },
+          parse: function(jsonStr) {
+            var j = JSON.parse(jsonStr);
+            var cipherParams = import_crypto_js.default.lib.CipherParams.create({ ciphertext: import_crypto_js.default.enc.Base64.parse(j.ct) });
+            if (j.iv)
+              cipherParams.iv = import_crypto_js.default.enc.Hex.parse(j.iv);
+            if (j.s)
+              cipherParams.salt = import_crypto_js.default.enc.Hex.parse(j.s);
+            return cipherParams;
+          }
+        };
+        let decryptedStr = "";
+        try {
+          decryptedStr = import_crypto_js.default.AES.decrypt(set, hash, { format: JsonFormatter }).toString(import_crypto_js.default.enc.Utf8);
+        } catch (decErr) {
+          console.log(`[DosyaLoad] Decryption failed: ${decErr.message}`);
+          return null;
         }
-        if (videoUrl && /^https?:\/\//i.test(videoUrl)) {
-          const subtitles = this.processSubtitles(html);
+        if (!decryptedStr) {
+          console.log(`[DosyaLoad] Decrypted string is empty`);
+          return null;
+        }
+        const config = JSON.parse(decryptedStr);
+        const videoUrl = config.video_location;
+        if (videoUrl) {
           console.log(`[DosyaLoad] Extracted: ${videoUrl}`);
+          const subtitles = [];
+          if (config.strSubtitles && Array.isArray(config.strSubtitles)) {
+            for (const track of config.strSubtitles) {
+              if (track.file && track.label) {
+                subtitles.push({
+                  label: track.label,
+                  file: track.file
+                });
+              }
+            }
+          }
           return {
             url: videoUrl,
             quality: "Auto",
