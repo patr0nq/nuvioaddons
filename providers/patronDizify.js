@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T21:24:52.405Z
+ * Generated: 2026-04-27T21:35:05.906Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -445,22 +445,31 @@ var DosyaLoadExtractor = class {
         const videoUrl = config.video_location;
         if (videoUrl) {
           console.log(`[DosyaLoad] Extracted: ${videoUrl}`);
+          const origin = new URL(embedUrl).origin;
           const subtitles = [];
           if (config.strSubtitles && Array.isArray(config.strSubtitles)) {
             for (const track of config.strSubtitles) {
               if (track.file && track.label) {
+                let subtitleFile = track.file;
+                if (subtitleFile.startsWith("/")) {
+                  subtitleFile = `${origin}${subtitleFile}`;
+                }
                 subtitles.push({
                   label: track.label,
-                  file: track.file
+                  file: subtitleFile
                 });
               }
             }
           }
+          let finalUrl = videoUrl;
+          if (finalUrl.includes("/list/") && !finalUrl.includes(".m3u8")) {
+            finalUrl += "#index.m3u8";
+          }
           return {
-            url: videoUrl,
+            url: finalUrl,
             quality: "Auto",
             headers: {
-              "Referer": new URL(embedUrl).origin + "/",
+              "Referer": origin + "/",
               "User-Agent": headers["User-Agent"]
             },
             subtitles
