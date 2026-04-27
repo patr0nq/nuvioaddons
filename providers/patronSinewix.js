@@ -1,6 +1,6 @@
 /**
  * patronSinewix - Built from src/patronSinewix/
- * Generated: 2026-04-27T21:47:08.002Z
+ * Generated: 2026-04-27T22:06:50.013Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -278,13 +278,16 @@ function extractStreams(tmdbId, mediaType, season, episode) {
         console.log(`[${PROVIDER_NAME}] Search "${shortTitle}" found ${results.length} results`);
       }
       const q = normalizeTitle(trTitle || origTitle);
-      const match = results.find(
-        (item) => (normalizeTitle(item.name) === q || normalizeTitle(item.title) === q || normalizeTitle(item.original_name) === q) && (mediaType === "movie" ? item.type === "movie" : item.type === "serie")
-      ) || results.find(
-        (item) => normalizeTitle(item.name) === q || normalizeTitle(item.title) === q || normalizeTitle(item.original_name) === q
-      ) || results[0];
+      const qOrig = normalizeTitle(origTitle);
+      const qShort = normalizeTitle(shortTitle);
+      let match = results.find((item) => {
+        const itemTitle = normalizeTitle(item.name || item.title);
+        const itemOrig = normalizeTitle(item.original_name);
+        const typeMatch = mediaType === "movie" ? item.type === "movie" : item.type === "serie";
+        return typeMatch && (itemTitle === q || itemTitle === qOrig || itemTitle === qShort || itemOrig === q || itemOrig === qOrig);
+      });
       if (!match) {
-        console.warn(`[${PROVIDER_NAME}] Icerik eslesmedi`);
+        console.warn(`[${PROVIDER_NAME}] Icerik eslesmedi: ${trTitle} / ${origTitle}`);
         return [];
       }
       console.log(`[${PROVIDER_NAME}] Matched: ${match.name || match.title} (ID: ${match.id})`);
