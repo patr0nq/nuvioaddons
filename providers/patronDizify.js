@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T14:23:09.674Z
+ * Generated: 2026-04-27T14:26:14.895Z
  */
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -457,9 +457,20 @@ function loadLinks(url) {
         console.log(`[Dizify] Using mock sources for testing`);
         return [
           {
-            url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            url: "https://vidmoly.to/embed-abc123.html",
             quality: "1080p",
-            headers: {}
+            headers: {
+              "Referer": "https://dizify.org/",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          },
+          {
+            url: "https://vidmoly.to/embed-def456.html",
+            quality: "720p",
+            headers: {
+              "Referer": "https://dizify.org/",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
           }
         ];
       }
