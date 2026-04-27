@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T21:56:15.265Z
+ * Generated: 2026-04-27T22:10:37.191Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -209,6 +209,11 @@ function getTmdbCredits(tmdbId, itemType) {
 // src/patronDizify/index.js
 var import_cheerio = require("cheerio");
 var import_crypto_js = __toESM(require("crypto-js"));
+function normalize(text) {
+  if (!text)
+    return "";
+  return text.toLowerCase().replace(/ı/g, "i").replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s").replace(/ö/g, "o").replace(/ç/g, "c").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+}
 var VidMolyExtractor = class {
   static canHandleUrl(url) {
     return url.includes("vidmoly") || this.supportedDomains.some((domain) => url.includes(domain));
@@ -490,13 +495,22 @@ function getStreams(tmdbId, type, season, episode) {
         console.log(`[Dizify] Searching for: ${query}`);
         const searchResults = yield search(query);
         if (searchResults.length > 0) {
-          match = searchResults.find((item) => {
-            const itemTitle = item.title.toLowerCase();
-            const cleanTr = (trTitle || "").toLowerCase();
-            const cleanOrig = (origTitle || "").toLowerCase();
-            const cleanQuery = query.toLowerCase();
-            return itemTitle.includes(cleanTr) || itemTitle.includes(cleanOrig) || itemTitle.includes(cleanQuery) || cleanTr.includes(itemTitle) || cleanOrig.includes(itemTitle);
+          const sameTypeResults = searchResults.filter((item) => item.type === type);
+          const resultsToSearch = sameTypeResults.length > 0 ? sameTypeResults : searchResults;
+          match = resultsToSearch.find((item) => {
+            const itemTitle = normalize(item.title);
+            const cleanTr = normalize(trTitle);
+            const cleanOrig = normalize(origTitle);
+            return itemTitle === cleanTr || itemTitle === cleanOrig;
           });
+          if (!match) {
+            match = resultsToSearch.find((item) => {
+              const itemTitle = normalize(item.title);
+              const cleanTr = normalize(trTitle);
+              const cleanOrig = normalize(origTitle);
+              return itemTitle.includes(cleanTr) || itemTitle.includes(cleanOrig) || cleanTr.includes(itemTitle) || cleanOrig.includes(itemTitle);
+            });
+          }
           if (match)
             break;
         }
@@ -514,7 +528,7 @@ function getStreams(tmdbId, type, season, episode) {
       let streamUrl = itemData.sourcesUrl;
       if (type === "tv" && itemData.episodes) {
         const episodeData = itemData.episodes.find(
-          (ep) => ep.season === season && ep.episode === episode
+          (ep) => Number(ep.season) === Number(season) && Number(ep.episode) === Number(episode)
         );
         if (episodeData) {
           streamUrl = episodeData.url;
@@ -567,12 +581,17 @@ function getMainPage(page = 1) {
         if (typeof items === "object" && items.data) {
           items = items.data;
         }
-        const categoryResults = items.slice(0, 20).map((item) => ({
-          title: item.title,
-          url: fixUrl(item.url),
-          poster: fixUrl(item.poster_url),
-          type: item.type === "series" ? "tv" : item.type || "movie"
-        }));
+        const categoryResults = items.slice(0, 20).map((item) => {
+          var _a, _b;
+          return {
+            id: item.url || item.slug || ((_a = item.id) == null ? void 0 : _a.toString()),
+            title: item.title,
+            url: fixUrl(item.url),
+            poster: fixUrl(item.poster_url),
+            type: item.type === "series" ? "tv" : item.type || "movie",
+            year: ((_b = item.release_year) == null ? void 0 : _b.toString()) || ""
+          };
+        });
         results.push({
           category: category.name,
           items: categoryResults
@@ -586,6 +605,7 @@ function getMainPage(page = 1) {
 }
 function search(query) {
   return __async(this, null, function* () {
+    var _a, _b;
     try {
       const searchUrl = `${API_URL}/search?q=${encodeURIComponent(query)}`;
       const data = yield fetchJSON(searchUrl, {
@@ -601,10 +621,12 @@ function search(query) {
       const series = searchData.series || [];
       for (const item of [...movies, ...series]) {
         results.push({
+          id: item.url || item.slug || ((_a = item.id) == null ? void 0 : _a.toString()),
           title: item.title,
           url: fixUrl(item.url),
           poster: fixUrl(item.poster_url),
-          type: item.type === "series" || series.includes(item) ? "tv" : "movie"
+          type: item.type === "series" || series.includes(item) ? "tv" : "movie",
+          year: ((_b = item.release_year) == null ? void 0 : _b.toString()) || ""
         });
       }
       return results;
@@ -623,11 +645,11 @@ function loadItem(url) {
       if (!slug) {
         throw new Error("Could not extract slug from URL");
       }
-      let endpoint = `${API_URL}/movies/${slug}`;
-      let data = yield fetchJSON(endpoint);
+      let endpoint = isSeries ? `${API_URL}/series/${slug}` : `${API_URL}/movies/${slug}`;
+      let data = yield fetchJSON(endpoint).catch(() => ({ success: false }));
       if (!data.success) {
-        endpoint = `${API_URL}/series/${slug}`;
-        data = yield fetchJSON(endpoint);
+        endpoint = isSeries ? `${API_URL}/movies/${slug}` : `${API_URL}/series/${slug}`;
+        data = yield fetchJSON(endpoint).catch(() => ({ success: false }));
         if (data.success) {
           isSeries = !isSeries;
         }
