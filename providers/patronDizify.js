@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T14:26:14.895Z
+ * Generated: 2026-04-27T14:34:26.271Z
  */
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -36,6 +36,10 @@ var __copyProps = (to, from, except, desc) => {
   return to;
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -125,25 +129,25 @@ function getTmdbTitleFromHtml(tmdbId, mediaType) {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const html = yield response.text();
+      const html2 = yield response.text();
       let trTitle = "";
-      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
+      const ogMatch = html2.match(/<meta property="og:title" content="([^"]+)">/i);
       if (ogMatch) {
         trTitle = ogMatch[1].split("(")[0].trim();
       } else {
-        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+        const titleMatch = html2.match(/<title>([^<]+)<\/title>/i);
         if (titleMatch) {
           trTitle = titleMatch[1].split("(")[0].split("\u2014")[0].split("\u2013")[0].trim();
         }
       }
       let origTitle = trTitle;
-      const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
+      const origMatch = html2.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html2.match(/<strong class="original_title">([^<]+)<\/strong>/i);
       if (origMatch) {
         const cleaned = origMatch[1].replace("Orijinal Ad\u0131", "").replace("Orijinal Ad", "").trim();
         if (cleaned.length > 0)
           origTitle = cleaned;
       }
-      const yearMatch = html.match(/\((\d{4})\)/);
+      const yearMatch = html2.match(/\((\d{4})\)/);
       const year = yearMatch ? parseInt(yearMatch[1]) : null;
       if (!trTitle)
         return null;
@@ -205,6 +209,152 @@ function getTmdbCredits(tmdbId, itemType) {
 }
 
 // src/patronDizify/index.js
+var import_cheerio = require("cheerio");
+var VidMolyExtractor = class {
+  static canHandleUrl(url) {
+    return url.includes("vidmoly") || this.supportedDomains.some((domain) => url.includes(domain));
+  }
+  static extract(embedUrl, referer = null) {
+    return __async(this, null, function* () {
+      var _a, _b;
+      try {
+        console.log(`[VidMoly] Extracting: ${embedUrl}`);
+        const headers = {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Sec-Fetch-Dest": "iframe"
+        };
+        if (referer) {
+          headers.Referer = referer;
+        }
+        const candidateUrls = [embedUrl];
+        const normalizedUrl = embedUrl.replace(/https?:\/\/vidmoly\.[a-z]+/, "https://vidmoly.me");
+        if (normalizedUrl !== embedUrl) {
+          candidateUrls.push(normalizedUrl);
+        }
+        const watchUrl = normalizedUrl.replace(/\/embed-([a-z0-9]+)\.html/, "/w/$1");
+        if (watchUrl !== normalizedUrl) {
+          candidateUrls.push(watchUrl);
+        }
+        let html = "";
+        let finalUrl = "";
+        for (const url of candidateUrls) {
+          try {
+            const response = yield fetch(url, { headers });
+            html = yield response.text();
+            finalUrl = url;
+            const lowerHtml = html.toLowerCase();
+            if (lowerHtml.includes("this video not found") || lowerHtml.includes("file was deleted") || lowerHtml.includes("video not found")) {
+              continue;
+            }
+            if (html.includes("sources:") || html.includes(".m3u8") || html.includes("jwplayer")) {
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+        if (!html) {
+          throw new Error("Could not fetch VidMoly page");
+        }
+        const $ = (0, import_cheerio.load)(html);
+        if (html.includes("Select number") || html.toLowerCase().includes("select the number")) {
+          const op = $('input[name="op"]').val();
+          const fileCode = $('input[name="file_code"]').val();
+          const answer = $("div.vhint b").text() || $("span.vhint b").text() || ((_a = html.match(/Please select (\d+)/)) == null ? void 0 : _a[1]);
+          const ts = $('input[name="ts"]').val();
+          const nonce = $('input[name="nonce"]').val();
+          const ctok = $('input[name="ctok"]').val();
+          if (op && fileCode && answer) {
+            const formData = new URLSearchParams();
+            formData.append("op", op);
+            formData.append("file_code", fileCode);
+            formData.append("answer", answer);
+            if (ts)
+              formData.append("ts", ts);
+            if (nonce)
+              formData.append("nonce", nonce);
+            if (ctok)
+              formData.append("ctok", ctok);
+            const response = yield fetch(finalUrl, {
+              method: "POST",
+              headers: __spreadProps(__spreadValues({}, headers), {
+                "Content-Type": "application/x-www-form-urlencoded"
+              }),
+              body: formData.toString()
+            });
+            html = yield response.text();
+            finalUrl = response.url;
+          }
+        }
+        let videoUrl = null;
+        if (html.includes("eval(")) {
+          try {
+            const unpacked = eval(((_b = html.match(/eval\((.*)\)/)) == null ? void 0 : _b[1]) || "");
+            if (unpacked && typeof unpacked === "string") {
+              const m3u8Match = unpacked.match(/['"]([^'"]*\.m3u8[^'"]*)['"]/);
+              if (m3u8Match) {
+                videoUrl = m3u8Match[1];
+              }
+            }
+          } catch (e) {
+          }
+        }
+        if (!videoUrl && html.includes("#EXTM3U")) {
+          const lines = html.split("\n");
+          for (const line of lines) {
+            if (line.trim().startsWith("http") && (line.includes(".m3u8") || line.includes(".mp4"))) {
+              videoUrl = line.trim().replace(/['"]/g, "");
+              break;
+            }
+          }
+        }
+        if (!videoUrl) {
+          const sourcesMatch = html.match(/sources:\s*\[([^\]]*)\]/);
+          if (sourcesMatch) {
+            try {
+              const sourcesText = this._addMarks(sourcesMatch[1], "file");
+              const sources = JSON.parse(`[${sourcesText}]`);
+              for (const source of sources) {
+                if (source.file) {
+                  videoUrl = source.file;
+                  break;
+                }
+              }
+            } catch (e) {
+            }
+          }
+        }
+        if (!videoUrl) {
+          const fileMatch = html.match(/file\s*:\s*['"]([^'"]*\.m3u8[^'"]*)['"]/) || html.match(/file\s*:\s*['"]([^'"]*\.mp4[^'"]*)['"]/);
+          if (fileMatch) {
+            videoUrl = fileMatch[1];
+          }
+        }
+        if (!videoUrl) {
+          throw new Error(`Could not extract video URL from ${embedUrl}`);
+        }
+        console.log(`[VidMoly] Extracted: ${videoUrl}`);
+        return {
+          url: videoUrl,
+          quality: "Auto",
+          headers: {
+            "Referer": finalUrl,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          }
+        };
+      } catch (error) {
+        console.error(`[VidMoly] Extract error: ${error.message}`);
+        return null;
+      }
+    });
+  }
+  static _addMarks(text, field) {
+    return text.replace(new RegExp(`"?${field}"?`, "g"), `"${field}"`);
+  }
+};
+__publicField(VidMolyExtractor, "name", "VidMoly");
+__publicField(VidMolyExtractor, "supportedDomains", ["vidmoly.to", "vidmoly.me", "vidmoly.net", "vidmoly.biz", "videobin.co"]);
 function getStreams(tmdbId, type, season, episode) {
   return __async(this, null, function* () {
     try {
@@ -437,14 +587,14 @@ function loadLinks(url) {
             const sources = data.data;
             console.log(`[Dizify] Found ${sources.length} sources from API`);
             for (const src of sources) {
-              const embedUrl = src.url;
-              if (!embedUrl)
+              const embedUrl2 = src.url;
+              if (!embedUrl2)
                 continue;
               const label = src.label || src.audio_type || "Kaynak";
               const quality = src.quality || "";
-              console.log(`[Dizify] Processing source: ${embedUrl} (${label} ${quality})`);
+              console.log(`[Dizify] Processing source: ${embedUrl2} (${label} ${quality})`);
               results.push({
-                url: embedUrl,
+                url: embedUrl2,
                 quality: `${label} ${quality}`.trim(),
                 headers: {}
               });
@@ -473,6 +623,16 @@ function loadLinks(url) {
             }
           }
         ];
+      }
+      if (VidMolyExtractor.canHandleUrl(url)) {
+        console.log(`[Dizify] Extracting VidMoly URL: ${url}`);
+        const extracted = yield VidMolyExtractor.extract(url, "https://dizify.org/");
+        if (extracted) {
+          return [extracted];
+        } else {
+          console.log(`[Dizify] Failed to extract VidMoly URL`);
+          return [];
+        }
       }
       const itemData = yield loadItem(url);
       if (itemData && itemData.sourcesUrl) {
