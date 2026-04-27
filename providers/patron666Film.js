@@ -1,6 +1,6 @@
 /**
  * patron666Film - Built from src/patron666Film/
- * Generated: 2026-04-19T18:43:30.360Z
+ * Generated: 2026-04-27T13:08:31.930Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -102,7 +102,9 @@ function fixUrl(url) {
 }
 
 // src/patron666Film/tmdb.js
-function getTmdbTitle(tmdbId, mediaType) {
+var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
+var PROVIDER_TAG = "[Patron666Film]";
+function getTmdbTitleFromHtml(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
       const type = mediaType === "movie" ? "movie" : "tv";
@@ -114,31 +116,69 @@ function getTmdbTitle(tmdbId, mediaType) {
         }
       });
       if (!response.ok) {
-        throw new Error(`TMDB HTML fetch hatas\u0131: ${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
       const html = yield response.text();
-      let title = "";
+      let trTitle = "";
       const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/);
       if (ogMatch) {
-        title = ogMatch[1];
+        trTitle = ogMatch[1];
       } else {
         const titleMatch = html.match(/<title>([^<]+)<\/title>/);
         if (titleMatch) {
-          title = titleMatch[1].split("(")[0].split("\u2014")[0].trim();
+          trTitle = titleMatch[1].split("(")[0].split("\u2014")[0].trim();
         }
       }
-      let origTitle = title;
+      let origTitle = trTitle;
       const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/) || html.match(/<strong class="original_title">([^<]+)<\/strong>/);
       if (origMatch) {
-        let matchedOrig = origMatch[1].replace("Orijinal Ad\u0131", "").trim();
-        if (matchedOrig.length > 0)
-          origTitle = matchedOrig;
+        const cleaned = origMatch[1].replace("Orijinal Ad\u0131", "").trim();
+        if (cleaned.length > 0)
+          origTitle = cleaned;
       }
-      return { trTitle: title, origTitle };
+      if (!trTitle)
+        return null;
+      console.log(`${PROVIDER_TAG} [HTML] Ba\u015Fl\u0131k bulundu: ${trTitle}`);
+      return { trTitle, origTitle };
     } catch (e) {
-      console.error(`[Patron666Film] TMDB ba\u015Fl\u0131k hatas\u0131: ${e.message}`);
-      return { trTitle: "", origTitle: "" };
+      console.warn(`${PROVIDER_TAG} [HTML] Scraping ba\u015Far\u0131s\u0131z: ${e.message}`);
+      return null;
     }
+  });
+}
+function getTmdbTitleFromApi(tmdbId, mediaType) {
+  return __async(this, null, function* () {
+    try {
+      const type = mediaType === "movie" ? "movie" : "tv";
+      const url = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
+      const response = yield fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = yield response.json();
+      const trTitle = data.title || data.name || "";
+      const origTitle = data.original_title || data.original_name || trTitle;
+      if (!trTitle)
+        return null;
+      console.log(`${PROVIDER_TAG} [API] Ba\u015Fl\u0131k bulundu: ${trTitle}`);
+      return { trTitle, origTitle };
+    } catch (e) {
+      console.warn(`${PROVIDER_TAG} [API] REST API ba\u015Far\u0131s\u0131z: ${e.message}`);
+      return null;
+    }
+  });
+}
+function getTmdbTitle(tmdbId, mediaType) {
+  return __async(this, null, function* () {
+    const htmlResult = yield getTmdbTitleFromHtml(tmdbId, mediaType);
+    if (htmlResult)
+      return htmlResult;
+    console.log(`${PROVIDER_TAG} HTML scraping ba\u015Far\u0131s\u0131z, TMDB REST API deneniyor...`);
+    const apiResult = yield getTmdbTitleFromApi(tmdbId, mediaType);
+    if (apiResult)
+      return apiResult;
+    console.error(`${PROVIDER_TAG} Her iki y\xF6ntem de ba\u015Far\u0131s\u0131z oldu: TMDB ID=${tmdbId}`);
+    return { trTitle: "", origTitle: "" };
   });
 }
 
