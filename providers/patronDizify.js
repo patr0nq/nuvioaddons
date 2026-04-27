@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T14:34:26.271Z
+ * Generated: 2026-04-27T20:22:55.680Z
  */
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -129,25 +129,25 @@ function getTmdbTitleFromHtml(tmdbId, mediaType) {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const html2 = yield response.text();
+      const html = yield response.text();
       let trTitle = "";
-      const ogMatch = html2.match(/<meta property="og:title" content="([^"]+)">/i);
+      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
       if (ogMatch) {
         trTitle = ogMatch[1].split("(")[0].trim();
       } else {
-        const titleMatch = html2.match(/<title>([^<]+)<\/title>/i);
+        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
         if (titleMatch) {
           trTitle = titleMatch[1].split("(")[0].split("\u2014")[0].split("\u2013")[0].trim();
         }
       }
       let origTitle = trTitle;
-      const origMatch = html2.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html2.match(/<strong class="original_title">([^<]+)<\/strong>/i);
+      const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
       if (origMatch) {
         const cleaned = origMatch[1].replace("Orijinal Ad\u0131", "").replace("Orijinal Ad", "").trim();
         if (cleaned.length > 0)
           origTitle = cleaned;
       }
-      const yearMatch = html2.match(/\((\d{4})\)/);
+      const yearMatch = html.match(/\((\d{4})\)/);
       const year = yearMatch ? parseInt(yearMatch[1]) : null;
       if (!trTitle)
         return null;
@@ -216,7 +216,7 @@ var VidMolyExtractor = class {
   }
   static extract(embedUrl, referer = null) {
     return __async(this, null, function* () {
-      var _a, _b;
+      var _a;
       try {
         console.log(`[VidMoly] Extracting: ${embedUrl}`);
         const headers = {
@@ -288,16 +288,15 @@ var VidMolyExtractor = class {
           }
         }
         let videoUrl = null;
-        if (html.includes("eval(")) {
-          try {
-            const unpacked = eval(((_b = html.match(/eval\((.*)\)/)) == null ? void 0 : _b[1]) || "");
-            if (unpacked && typeof unpacked === "string") {
-              const m3u8Match = unpacked.match(/['"]([^'"]*\.m3u8[^'"]*)['"]/);
-              if (m3u8Match) {
-                videoUrl = m3u8Match[1];
-              }
+        const scriptMatches = html.match(/eval\(function\(p,a,c,k,e,?[d]?\).*?\)\)/g);
+        if (scriptMatches) {
+          for (let script of scriptMatches) {
+            const unpacked = this.unpackJS(script);
+            const vidMatch = unpacked.match(/file\s*:\s*["']([^"']+\.m3u8[^"']*)["']/i) || unpacked.match(/file\s*:\s*["']([^"']+\.mp4[^"']*)["']/i);
+            if (vidMatch) {
+              videoUrl = vidMatch[1];
+              break;
             }
-          } catch (e) {
           }
         }
         if (!videoUrl && html.includes("#EXTM3U")) {
@@ -348,6 +347,31 @@ var VidMolyExtractor = class {
         return null;
       }
     });
+  }
+  static unpackJS(code) {
+    try {
+      const match = code.match(/}\('([^']*)',(\d+),(\d+),'([^']*)'\.split\('\|'\)/);
+      if (!match)
+        return code;
+      let p = match[1];
+      const a = parseInt(match[2], 10);
+      const c = parseInt(match[3], 10);
+      const k = match[4].split("|");
+      const e = (c2) => {
+        return (c2 < a ? "" : e(parseInt(c2 / a, 10))) + (c2 % a > 35 ? String.fromCharCode(c2 % a + 29) : (c2 % a).toString(36));
+      };
+      let map = {};
+      for (let i = 0; i < c; i++) {
+        map[e(i)] = k[i];
+      }
+      const dictRegex = new RegExp("\\b(" + Object.keys(map).filter((key) => key).join("|") + ")\\b", "g");
+      const unpacked = p.replace(dictRegex, function(match2) {
+        return map[match2] || match2;
+      });
+      return unpacked;
+    } catch (err) {
+      return code;
+    }
   }
   static _addMarks(text, field) {
     return text.replace(new RegExp(`"?${field}"?`, "g"), `"${field}"`);
@@ -505,10 +529,10 @@ function loadItem(url) {
       if (!slug) {
         throw new Error("Could not extract slug from URL");
       }
-      let endpoint = `${API_URL}/${isSeries ? "series" : "movies"}/${slug}`;
+      let endpoint = `${API_URL}/movies/${slug}`;
       let data = yield fetchJSON(endpoint);
       if (!data.success) {
-        endpoint = `${API_URL}/${isSeries ? "movies" : "series"}/${slug}`;
+        endpoint = `${API_URL}/series/${slug}`;
         data = yield fetchJSON(endpoint);
         if (data.success) {
           isSeries = !isSeries;
@@ -566,7 +590,7 @@ function loadItem(url) {
         }
         result.episodes = episodes;
       } else {
-        result.sourcesUrl = `${API_URL}/movies/${item.id}/sources`;
+        result.sourcesUrl = `https://dizify.org/api/movies/${item.id}/sources`;
       }
       return result;
     } catch (error) {
@@ -587,14 +611,14 @@ function loadLinks(url) {
             const sources = data.data;
             console.log(`[Dizify] Found ${sources.length} sources from API`);
             for (const src of sources) {
-              const embedUrl2 = src.url;
-              if (!embedUrl2)
+              const embedUrl = src.url;
+              if (!embedUrl)
                 continue;
               const label = src.label || src.audio_type || "Kaynak";
               const quality = src.quality || "";
-              console.log(`[Dizify] Processing source: ${embedUrl2} (${label} ${quality})`);
+              console.log(`[Dizify] Processing source: ${embedUrl} (${label} ${quality})`);
               results.push({
-                url: embedUrl2,
+                url: embedUrl,
                 quality: `${label} ${quality}`.trim(),
                 headers: {}
               });
