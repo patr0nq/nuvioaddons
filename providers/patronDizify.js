@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T20:50:55.329Z
+ * Generated: 2026-04-27T21:24:52.405Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -687,7 +687,7 @@ function loadItem(url) {
         }
         result.episodes = episodes;
       } else {
-        result.sourcesUrl = `${API_URL}/movies/${item.id}/sources`;
+        result.sourcesUrl = `${API_URL}/movies/${item.slug}/sources`;
       }
       return result;
     } catch (error) {
