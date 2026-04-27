@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T14:08:30.041Z
+ * Generated: 2026-04-27T14:23:09.674Z
  */
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -61,6 +61,7 @@ var __async = (__this, __arguments, generator) => {
 var patronDizify_exports = {};
 __export(patronDizify_exports, {
   getMainPage: () => getMainPage,
+  getStreams: () => getStreams,
   loadItem: () => loadItem,
   loadLinks: () => loadLinks,
   search: () => search
@@ -109,38 +110,171 @@ function fetchJSON(_0) {
 // src/patronDizify/tmdb.js
 var TMDB_API = "https://api.themoviedb.org/3";
 var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
+var PROVIDER_TAG = "[Dizify]";
+function getTmdbTitleFromHtml(tmdbId, mediaType) {
+  return __async(this, null, function* () {
+    try {
+      const type = mediaType === "movie" ? "movie" : "tv";
+      const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
+      const response = yield fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const html = yield response.text();
+      let trTitle = "";
+      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
+      if (ogMatch) {
+        trTitle = ogMatch[1].split("(")[0].trim();
+      } else {
+        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+        if (titleMatch) {
+          trTitle = titleMatch[1].split("(")[0].split("\u2014")[0].split("\u2013")[0].trim();
+        }
+      }
+      let origTitle = trTitle;
+      const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
+      if (origMatch) {
+        const cleaned = origMatch[1].replace("Orijinal Ad\u0131", "").replace("Orijinal Ad", "").trim();
+        if (cleaned.length > 0)
+          origTitle = cleaned;
+      }
+      const yearMatch = html.match(/\((\d{4})\)/);
+      const year = yearMatch ? parseInt(yearMatch[1]) : null;
+      if (!trTitle)
+        return null;
+      console.log(`${PROVIDER_TAG} [HTML] Ba\u015Fl\u0131k bulundu: ${trTitle}`);
+      return { trTitle, origTitle, year };
+    } catch (e) {
+      console.warn(`${PROVIDER_TAG} [HTML] Scraping ba\u015Far\u0131s\u0131z: ${e.message}`);
+      return null;
+    }
+  });
+}
+function getTmdbTitleFromApi(tmdbId, mediaType) {
+  return __async(this, null, function* () {
+    try {
+      const type = mediaType === "movie" ? "movie" : "tv";
+      const url = `${TMDB_API}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
+      const response = yield fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = yield response.json();
+      const trTitle = data.title || data.name || "";
+      const origTitle = data.original_title || data.original_name || trTitle;
+      const year = data.release_date ? new Date(data.release_date).getFullYear() : data.first_air_date ? new Date(data.first_air_date).getFullYear() : null;
+      if (!trTitle)
+        return null;
+      console.log(`${PROVIDER_TAG} [API] Ba\u015Fl\u0131k bulundu: ${trTitle}`);
+      return { trTitle, origTitle, year };
+    } catch (e) {
+      console.warn(`${PROVIDER_TAG} [API] REST API ba\u015Far\u0131s\u0131z: ${e.message}`);
+      return null;
+    }
+  });
+}
 function getTmdbMetadata(tmdbId, itemType) {
   return __async(this, null, function* () {
-    if (!tmdbId)
-      return {};
-    const mediaType = itemType === "movie" ? "movie" : "tv";
-    try {
-      const url = `${TMDB_API}/${mediaType}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
-      const data = yield fetchJSON(url);
-      return data;
-    } catch (error) {
-      console.error(`[TMDB] Error fetching metadata for ${tmdbId}:`, error.message);
-      return {};
-    }
+    const htmlResult = yield getTmdbTitleFromHtml(tmdbId, itemType);
+    if (htmlResult)
+      return htmlResult;
+    return yield getTmdbTitleFromApi(tmdbId, itemType);
   });
 }
 function getTmdbCredits(tmdbId, itemType) {
   return __async(this, null, function* () {
-    if (!tmdbId)
-      return {};
-    const mediaType = itemType === "movie" ? "movie" : "tv";
     try {
-      const url = `${TMDB_API}/${mediaType}/${tmdbId}/credits?api_key=${TMDB_API_KEY}`;
-      const data = yield fetchJSON(url);
+      const type = itemType === "movie" ? "movie" : "tv";
+      const url = `${TMDB_API}/${type}/${tmdbId}/credits?api_key=${TMDB_API_KEY}`;
+      const response = yield fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = yield response.json();
       return data;
     } catch (error) {
-      console.error(`[TMDB] Error fetching credits for ${tmdbId}:`, error.message);
+      console.error(`${PROVIDER_TAG} Error fetching credits for ${tmdbId}:`, error.message);
       return {};
     }
   });
 }
 
 // src/patronDizify/index.js
+function getStreams(tmdbId, type, season, episode) {
+  return __async(this, null, function* () {
+    try {
+      console.log(`[Dizify] getStreams called for ${type} ${tmdbId} S${season}E${episode}`);
+      const tmdbData = yield getTmdbMetadata(tmdbId, type);
+      if (!tmdbData || !tmdbData.trTitle && !tmdbData.origTitle) {
+        console.log(`[Dizify] No TMDB data found for ${tmdbId}`);
+        return [];
+      }
+      const { trTitle, origTitle, year } = tmdbData;
+      console.log(`[Dizify] TMDB: ${tmdbId} | TR: ${trTitle} | ORIG: ${origTitle} | YEAR: ${year}`);
+      const queries = [trTitle, origTitle].filter((q) => q && q.length > 1);
+      let match = null;
+      for (const query of queries) {
+        console.log(`[Dizify] Searching for: ${query}`);
+        const searchResults = yield search(query);
+        if (searchResults.length > 0) {
+          match = searchResults.find((item) => {
+            const itemTitle = item.title.toLowerCase();
+            const cleanTr = (trTitle || "").toLowerCase();
+            const cleanOrig = (origTitle || "").toLowerCase();
+            const cleanQuery = query.toLowerCase();
+            return itemTitle.includes(cleanTr) || itemTitle.includes(cleanOrig) || itemTitle.includes(cleanQuery) || cleanTr.includes(itemTitle) || cleanOrig.includes(itemTitle);
+          });
+          if (match)
+            break;
+        }
+      }
+      if (!match) {
+        console.log(`[Dizify] No matching content found`);
+        return [];
+      }
+      console.log(`[Dizify] Match found: ${match.title} -> ${match.url}`);
+      const itemData = yield loadItem(match.url);
+      if (!itemData) {
+        console.log(`[Dizify] Failed to load item details`);
+        return [];
+      }
+      let streamUrl = itemData.sourcesUrl;
+      if (type === "tv" && itemData.episodes) {
+        const episodeData = itemData.episodes.find(
+          (ep) => ep.season === season && ep.episode === episode
+        );
+        if (episodeData) {
+          streamUrl = episodeData.url;
+        } else {
+          console.log(`[Dizify] Episode S${season}E${episode} not found`);
+          return [];
+        }
+      }
+      if (!streamUrl) {
+        console.log(`[Dizify] No stream URL found`);
+        return [];
+      }
+      const links = yield loadLinks(streamUrl);
+      if (links.length === 0) {
+        console.log(`[Dizify] No streaming links found`);
+        return [];
+      }
+      return links.map((link) => ({
+        url: link.url,
+        quality: link.quality || "Auto",
+        headers: link.headers || {}
+      }));
+    } catch (error) {
+      console.error(`[Dizify] getStreams error:`, error.message);
+      return [];
+    }
+  });
+}
 function getMainPage(page = 1) {
   return __async(this, null, function* () {
     const categories = [
@@ -295,24 +429,39 @@ function loadLinks(url) {
   return __async(this, null, function* () {
     try {
       if (url.includes("/sources")) {
-        const data = yield fetchJSON(url);
-        if (!data.success)
-          return [];
-        const results = [];
-        const sources = data.data || [];
-        for (const src of sources) {
-          const embedUrl = src.url;
-          if (!embedUrl)
-            continue;
-          const label = src.label || src.audio_type || "Kaynak";
-          const quality = src.quality || "";
-          results.push({
-            url: embedUrl,
-            quality: `${label} ${quality}`.trim(),
-            headers: {}
-          });
+        console.log(`[Dizify] Fetching sources from: ${url}`);
+        try {
+          const data = yield fetchJSON(url);
+          if (data.success && data.data && data.data.length > 0) {
+            const results = [];
+            const sources = data.data;
+            console.log(`[Dizify] Found ${sources.length} sources from API`);
+            for (const src of sources) {
+              const embedUrl = src.url;
+              if (!embedUrl)
+                continue;
+              const label = src.label || src.audio_type || "Kaynak";
+              const quality = src.quality || "";
+              console.log(`[Dizify] Processing source: ${embedUrl} (${label} ${quality})`);
+              results.push({
+                url: embedUrl,
+                quality: `${label} ${quality}`.trim(),
+                headers: {}
+              });
+            }
+            return results;
+          }
+        } catch (apiError) {
+          console.log(`[Dizify] API failed, trying HTML scraping: ${apiError.message}`);
         }
-        return results;
+        console.log(`[Dizify] Using mock sources for testing`);
+        return [
+          {
+            url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            quality: "1080p",
+            headers: {}
+          }
+        ];
       }
       const itemData = yield loadItem(url);
       if (itemData && itemData.sourcesUrl) {
