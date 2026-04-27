@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T20:22:55.680Z
+ * Generated: 2026-04-27T20:44:13.619Z
  */
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -379,6 +379,131 @@ var VidMolyExtractor = class {
 };
 __publicField(VidMolyExtractor, "name", "VidMoly");
 __publicField(VidMolyExtractor, "supportedDomains", ["vidmoly.to", "vidmoly.me", "vidmoly.net", "vidmoly.biz", "videobin.co"]);
+var DosyaLoadExtractor = class {
+  static canHandleUrl(url) {
+    return this.supportedDomains.some((domain) => url.includes(domain));
+  }
+  static decodeBase64Latin1(input) {
+    try {
+      if (typeof atob === "function")
+        return atob(input);
+      return Buffer.from(input, "base64").toString("latin1");
+    } catch (e) {
+      return input;
+    }
+  }
+  static rot13(str) {
+    return str.replace(/[a-zA-Z]/g, (c) => {
+      const base = c <= "Z" ? 65 : 97;
+      return String.fromCharCode((c.charCodeAt(0) - base + 13) % 26 + base);
+    });
+  }
+  static decryptNative(html) {
+    try {
+      const scriptBlockMatch = html.match(/<script[^>]*>([\s\S]*?dc_[a-zA-Z0-9_]+\([\s\S]*?)<\/script>/i);
+      const scriptContent = scriptBlockMatch == null ? void 0 : scriptBlockMatch[1];
+      if (!scriptContent)
+        return null;
+      const arrayMatch = scriptContent.match(/\(\[((?:"[^"]+",?\s*)+)\]\)/);
+      if (!(arrayMatch == null ? void 0 : arrayMatch[1]))
+        return null;
+      const parts = arrayMatch[1].split(",").map((s) => s.trim().replace(/^"|"$/g, "").replace(/\\\//g, "/"));
+      const moduloMatch = scriptContent.match(/(\d+)\s*%\s*\(i\s*\+\s*(\d+)\)/);
+      const magicNum = (moduloMatch == null ? void 0 : moduloMatch[1]) ? Number(moduloMatch[1]) : 399756995;
+      const magicOffset = (moduloMatch == null ? void 0 : moduloMatch[2]) ? Number(moduloMatch[2]) : 5;
+      const functionBodyMatch = scriptContent.match(/function\s+dc_[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{([\s\S]*?)return\s+unmix;/);
+      const functionBody = (functionBodyMatch == null ? void 0 : functionBodyMatch[1]) || scriptContent;
+      const reverseIdx = functionBody.indexOf(".reverse()");
+      const atobIdx = functionBody.indexOf("atob(");
+      const rot13Idx = functionBody.search(/\.replace\(\s*\/\[a-zA-Z\]\/g/);
+      const operations = [
+        { idx: reverseIdx, op: "reverse" },
+        { idx: atobIdx, op: "atob" },
+        { idx: rot13Idx, op: "rot13" }
+      ].filter((x) => x.idx !== -1).sort((a, b) => a.idx - b.idx);
+      let result = parts.join("");
+      for (const { op } of operations) {
+        if (op === "reverse")
+          result = result.split("").reverse().join("");
+        else if (op === "atob")
+          result = this.decodeBase64Latin1(result);
+        else if (op === "rot13")
+          result = this.rot13(result);
+      }
+      let unmix = "";
+      for (let i = 0; i < result.length; i++) {
+        const charCode = result.charCodeAt(i);
+        const decryptedCode = (charCode - magicNum % (i + magicOffset) + 256) % 256;
+        unmix += String.fromCharCode(decryptedCode);
+      }
+      return unmix;
+    } catch (e) {
+      return null;
+    }
+  }
+  static processSubtitles(html) {
+    var _a, _b, _c;
+    const subtitles = [];
+    try {
+      const tracksMatch = html.match(/tracks\s*:\s*(\[[\s\S]*?\])/i);
+      if (!(tracksMatch == null ? void 0 : tracksMatch[1]))
+        return subtitles;
+      const tracksJson = tracksMatch[1];
+      const blocks = tracksJson.match(/\{[^}]*\}/g) || [];
+      for (const block of blocks) {
+        const file = (_b = (_a = block.match(/"file"\s*:\s*"([^"]+)"/)) == null ? void 0 : _a[1]) == null ? void 0 : _b.replace(/\\\//g, "/");
+        const label = ((_c = block.match(/"label"\s*:\s*"([^"]+)"/)) == null ? void 0 : _c[1]) || "Altyaz\u0131";
+        if (file && /^https?:\/\//i.test(file)) {
+          subtitles.push({ label, file });
+        }
+      }
+    } catch (e) {
+    }
+    return subtitles;
+  }
+  static extract(embedUrl, referer = null) {
+    return __async(this, null, function* () {
+      var _a;
+      try {
+        console.log(`[DosyaLoad] Extracting: ${embedUrl}`);
+        const headers = {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Referer": referer || "https://dizify.org/"
+        };
+        const response = yield fetch(embedUrl, { headers });
+        const html = yield response.text();
+        let videoUrl = this.decryptNative(html);
+        if (!videoUrl) {
+          const ldMatch = html.match(/"contentUrl"\s*:\s*"([^"]+)"/i);
+          videoUrl = (_a = ldMatch == null ? void 0 : ldMatch[1]) == null ? void 0 : _a.replace(/\\\//g, "/");
+        }
+        if (!videoUrl) {
+          const direct = html.match(/file\s*:\s*["']([^"']+\.(?:m3u8|mp4)[^"']*)["']/i) || html.match(/["'](https?:\/\/[^"']+\.(?:m3u8|mp4)[^"']*)["']/i);
+          videoUrl = (direct == null ? void 0 : direct[1]) || null;
+        }
+        if (videoUrl && /^https?:\/\//i.test(videoUrl)) {
+          const subtitles = this.processSubtitles(html);
+          console.log(`[DosyaLoad] Extracted: ${videoUrl}`);
+          return {
+            url: videoUrl,
+            quality: "Auto",
+            headers: {
+              "Referer": new URL(embedUrl).origin + "/",
+              "User-Agent": headers["User-Agent"]
+            },
+            subtitles
+          };
+        }
+        return null;
+      } catch (err) {
+        console.error(`[DosyaLoad] Extract error: ${err.message}`);
+        return null;
+      }
+    });
+  }
+};
+__publicField(DosyaLoadExtractor, "name", "DosyaLoad");
+__publicField(DosyaLoadExtractor, "supportedDomains", ["dosyaload.com", "closeload.com"]);
 function getStreams(tmdbId, type, season, episode) {
   return __async(this, null, function* () {
     try {
@@ -590,7 +715,7 @@ function loadItem(url) {
         }
         result.episodes = episodes;
       } else {
-        result.sourcesUrl = `https://dizify.org/api/movies/${item.id}/sources`;
+        result.sourcesUrl = `${API_URL}/movies/${item.id}/sources`;
       }
       return result;
     } catch (error) {
@@ -617,11 +742,25 @@ function loadLinks(url) {
               const label = src.label || src.audio_type || "Kaynak";
               const quality = src.quality || "";
               console.log(`[Dizify] Processing source: ${embedUrl} (${label} ${quality})`);
-              results.push({
-                url: embedUrl,
-                quality: `${label} ${quality}`.trim(),
-                headers: {}
-              });
+              if (VidMolyExtractor.canHandleUrl(embedUrl)) {
+                const extracted = yield VidMolyExtractor.extract(embedUrl, "https://dizify.org/");
+                if (extracted) {
+                  extracted.quality = `${label} ${quality}`.trim();
+                  results.push(extracted);
+                }
+              } else if (DosyaLoadExtractor.canHandleUrl(embedUrl)) {
+                const extracted = yield DosyaLoadExtractor.extract(embedUrl, "https://dizify.org/");
+                if (extracted) {
+                  extracted.quality = `${label} ${quality}`.trim();
+                  results.push(extracted);
+                }
+              } else {
+                results.push({
+                  url: embedUrl,
+                  quality: `${label} ${quality}`.trim(),
+                  headers: {}
+                });
+              }
             }
             return results;
           }
@@ -653,9 +792,13 @@ function loadLinks(url) {
         const extracted = yield VidMolyExtractor.extract(url, "https://dizify.org/");
         if (extracted) {
           return [extracted];
-        } else {
-          console.log(`[Dizify] Failed to extract VidMoly URL`);
-          return [];
+        }
+      }
+      if (DosyaLoadExtractor.canHandleUrl(url)) {
+        console.log(`[Dizify] Extracting DosyaLoad URL: ${url}`);
+        const extracted = yield DosyaLoadExtractor.extract(url, "https://dizify.org/");
+        if (extracted) {
+          return [extracted];
         }
       }
       const itemData = yield loadItem(url);
