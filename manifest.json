@@ -226,7 +226,7 @@
       "id": "patron-dizify",
       "name": "patronDizify",
       "description": "Dizify.org tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "author": "patr0n",
       "supportedTypes": [
         "movie",

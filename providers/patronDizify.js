@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T21:35:05.906Z
+ * Generated: 2026-04-27T21:40:11.073Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -583,7 +583,7 @@ function getMainPage(page = 1) {
           title: item.title,
           url: fixUrl(item.url),
           poster: fixUrl(item.poster_url),
-          type: item.type || "movie"
+          type: item.type === "series" ? "tv" : item.type || "movie"
         }));
         results.push({
           category: category.name,
@@ -616,7 +616,7 @@ function search(query) {
           title: item.title,
           url: fixUrl(item.url),
           poster: fixUrl(item.poster_url),
-          type: item.type || (series.includes(item) ? "series" : "movie")
+          type: item.type === "series" || series.includes(item) ? "tv" : "movie"
         });
       }
       return results;
