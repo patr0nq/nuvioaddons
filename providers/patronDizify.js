@@ -1,6 +1,6 @@
 /**
  * patronDizify - Built from src/patronDizify/
- * Generated: 2026-04-27T21:40:11.073Z
+ * Generated: 2026-04-27T21:56:15.265Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -122,82 +122,71 @@ function fetchJSON(_0) {
 }
 
 // src/patronDizify/tmdb.js
+var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
 var TMDB_API = "https://api.themoviedb.org/3";
 var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
 var PROVIDER_TAG = "[Dizify]";
-function getTmdbTitleFromHtml(tmdbId, mediaType) {
+var TMDB_SCRAPE_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+};
+function decodeHtml(text) {
+  return (text || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#039;/g, "'");
+}
+function getTmdbMetadata(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
       const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
-      const response = yield fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const html = yield response.text();
+      const scrapeUrl = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
+      console.log(`${PROVIDER_TAG} Scraping TMDB: ${scrapeUrl}`);
+      const response = yield fetch(scrapeUrl, { headers: TMDB_SCRAPE_HEADERS });
       let trTitle = "";
-      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
-      if (ogMatch) {
-        trTitle = ogMatch[1].split("(")[0].trim();
-      } else {
-        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
-        if (titleMatch) {
-          trTitle = titleMatch[1].split("(")[0].split("\u2014")[0].split("\u2013")[0].trim();
+      let origTitle = "";
+      let year = "";
+      if (response.ok) {
+        const html = yield response.text();
+        const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
+        if (ogMatch) {
+          trTitle = decodeHtml(ogMatch[1]).split("(")[0].trim();
+        }
+        const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
+        if (origMatch) {
+          origTitle = decodeHtml(origMatch[1]).trim();
+        }
+        const yearMatch = html.match(/\((\d{4})\)/);
+        if (yearMatch) {
+          year = yearMatch[1];
+        }
+        if (!origTitle) {
+          const $ = import_cheerio_without_node_native.default.load(html);
+          $("section.facts p").each((_, el) => {
+            const text = $(el).text();
+            if (text.includes("Orijinal Ba\u015Fl\u0131k") || text.includes("Original Title")) {
+              origTitle = text.replace("Orijinal Ba\u015Fl\u0131k", "").replace("Original Title", "").trim();
+            }
+          });
         }
       }
-      let origTitle = trTitle;
-      const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
-      if (origMatch) {
-        const cleaned = origMatch[1].replace("Orijinal Ad\u0131", "").replace("Orijinal Ad", "").trim();
-        if (cleaned.length > 0)
-          origTitle = cleaned;
+      if (!trTitle || !origTitle) {
+        console.log(`${PROVIDER_TAG} TMDB Scrape failed or partial, using API fallback...`);
+        const apiUrl = `${TMDB_API}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
+        const apiRes = yield fetch(apiUrl);
+        if (apiRes.ok) {
+          const data = yield apiRes.json();
+          trTitle = data.title || data.name || trTitle;
+          origTitle = data.original_title || data.original_name || origTitle;
+          year = (data.release_date || data.first_air_date || year).substring(0, 4);
+        }
       }
-      const yearMatch = html.match(/\((\d{4})\)/);
-      const year = yearMatch ? parseInt(yearMatch[1]) : null;
-      if (!trTitle)
-        return null;
-      console.log(`${PROVIDER_TAG} [HTML] Ba\u015Fl\u0131k bulundu: ${trTitle}`);
-      return { trTitle, origTitle, year };
-    } catch (e) {
-      console.warn(`${PROVIDER_TAG} [HTML] Scraping ba\u015Far\u0131s\u0131z: ${e.message}`);
-      return null;
+      return {
+        trTitle: trTitle || origTitle,
+        origTitle: origTitle || trTitle,
+        year
+      };
+    } catch (error) {
+      console.error(`${PROVIDER_TAG} TMDB metadata fetch error: ${error.message}`);
+      return { trTitle: "", origTitle: "", year: "" };
     }
-  });
-}
-function getTmdbTitleFromApi(tmdbId, mediaType) {
-  return __async(this, null, function* () {
-    try {
-      const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `${TMDB_API}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
-      const response = yield fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const data = yield response.json();
-      const trTitle = data.title || data.name || "";
-      const origTitle = data.original_title || data.original_name || trTitle;
-      const year = data.release_date ? new Date(data.release_date).getFullYear() : data.first_air_date ? new Date(data.first_air_date).getFullYear() : null;
-      if (!trTitle)
-        return null;
-      console.log(`${PROVIDER_TAG} [API] Ba\u015Fl\u0131k bulundu: ${trTitle}`);
-      return { trTitle, origTitle, year };
-    } catch (e) {
-      console.warn(`${PROVIDER_TAG} [API] REST API ba\u015Far\u0131s\u0131z: ${e.message}`);
-      return null;
-    }
-  });
-}
-function getTmdbMetadata(tmdbId, itemType) {
-  return __async(this, null, function* () {
-    const htmlResult = yield getTmdbTitleFromHtml(tmdbId, itemType);
-    if (htmlResult)
-      return htmlResult;
-    return yield getTmdbTitleFromApi(tmdbId, itemType);
   });
 }
 function getTmdbCredits(tmdbId, itemType) {
@@ -206,9 +195,8 @@ function getTmdbCredits(tmdbId, itemType) {
       const type = itemType === "movie" ? "movie" : "tv";
       const url = `${TMDB_API}/${type}/${tmdbId}/credits?api_key=${TMDB_API_KEY}`;
       const response = yield fetch(url);
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(`HTTP ${response.status}`);
-      }
       const data = yield response.json();
       return data;
     } catch (error) {
