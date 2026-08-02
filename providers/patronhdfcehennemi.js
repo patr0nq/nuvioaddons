@@ -1,6 +1,6 @@
 /**
  * patronhdfcehennemi - Built from src/patronhdfcehennemi/
- * Generated: 2026-08-02T11:05:15.594Z
+ * Generated: 2026-08-02T11:23:11.584Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -110,39 +110,27 @@ function fixUrl(url) {
 }
 
 // src/patronhdfcehennemi/tmdb.js
+var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
       const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
+      const url = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
       const response = yield fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+          "Accept": "application/json"
         }
       });
       if (!response.ok) {
-        throw new Error(`TMDB HTML fetch hatasi: ${response.status}`);
+        throw new Error(`TMDB API hatasi: ${response.status}`);
       }
-      const html = yield response.text();
-      let title = "";
-      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
-      if (ogMatch) {
-        title = ogMatch[1].split("(")[0].trim();
-      } else {
-        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
-        if (titleMatch) {
-          title = titleMatch[1].split("(")[0].split("\u2014")[0].split("\xE2\u20AC\u201D")[0].trim();
-        }
+      const data = yield response.json();
+      let trTitle = type === "movie" ? data.title : data.name;
+      let origTitle = type === "movie" ? data.original_title : data.original_name;
+      if (!trTitle) {
+        trTitle = origTitle;
       }
-      let origTitle = title;
-      const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
-      if (origMatch) {
-        const matched = origMatch[1].replace("Orijinal Adi", "").replace("Orijinal Ad\u0131", "").trim();
-        if (matched)
-          origTitle = matched;
-      }
-      return { trTitle: title, origTitle };
+      return { trTitle: (trTitle == null ? void 0 : trTitle.trim()) || "", origTitle: (origTitle == null ? void 0 : origTitle.trim()) || "" };
     } catch (error) {
       console.error(`[PatronHDFCehennemi] TMDB baslik hatasi: ${error.message}`);
       return { trTitle: "", origTitle: "" };
