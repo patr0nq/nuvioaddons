@@ -1,6 +1,6 @@
 /**
  * patrondortkhd - Built from src/patrondortkhd/
- * Generated: 2026-06-18T21:21:12.656Z
+ * Generated: 2026-08-02T11:28:04.474Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -139,57 +139,33 @@ function fetchText(_0) {
 
 // src/patrondortkhd/tmdb.js
 var import_cheerio_without_node_native = __toESM(require("cheerio-without-node-native"));
+var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
-      let decodeHtml = function(text) {
-        return (text || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#039;/g, "'");
-      };
       const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
+      const url = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
       const response = yield fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+          "Accept": "application/json"
         }
       });
       if (!response.ok) {
-        throw new Error(`TMDB HTML fetch hatasi: ${response.status}`);
+        throw new Error(`TMDB API hatasi: ${response.status}`);
       }
-      const html = yield response.text();
-      let title = "";
-      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/i);
-      if (ogMatch) {
-        title = decodeHtml(ogMatch[1]).split("(")[0].trim();
-      } else {
-        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
-        if (titleMatch) {
-          title = decodeHtml(titleMatch[1]).split("(")[0].split("\u2014")[0].split("\xE2\u20AC\u201D")[0].trim();
-        }
+      const data = yield response.json();
+      let trTitle = type === "movie" ? data.title : data.name;
+      let origTitle = type === "movie" ? data.original_title : data.original_name;
+      if (!trTitle) {
+        trTitle = origTitle;
       }
-      const $ = import_cheerio_without_node_native.default.load(html);
-      let origTitle = title;
-      $("section.facts p").each((_, el) => {
-        const text = $(el).text();
-        if (text.includes("Orijinal Ba\u015Fl\u0131k") || text.includes("Original Title")) {
-          const found = text.replace("Orijinal Ba\u015Fl\u0131k", "").replace("Original Title", "").trim();
-          if (found)
-            origTitle = decodeHtml(found);
-        }
-      });
-      if (origTitle === title) {
-        const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/i) || html.match(/<strong class="original_title">([^<]+)<\/strong>/i);
-        if (origMatch) {
-          const matched = decodeHtml(origMatch[1]).replace("Orijinal Adi", "").replace("Orijinal Ad\u0131", "").trim();
-          if (matched)
-            origTitle = matched;
-        }
-      }
+      trTitle = (trTitle == null ? void 0 : trTitle.trim()) || "";
+      origTitle = (origTitle == null ? void 0 : origTitle.trim()) || "";
       let shortTitle = "";
       if (origTitle && (origTitle.includes(":") || origTitle.toLowerCase().includes(" and "))) {
         shortTitle = origTitle.split(":")[0].split(/ and /i)[0].trim();
       }
-      return { trTitle: title, origTitle, shortTitle };
+      return { trTitle, origTitle, shortTitle };
     } catch (error) {
       console.error(`[PatronDortKHD] TMDB baslik hatasi: ${error.message}`);
       return { trTitle: "", origTitle: "", shortTitle: "" };
