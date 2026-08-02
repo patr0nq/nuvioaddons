@@ -1,6 +1,6 @@
 /**
  * patronDizipal - Built from src/patronDizipal/
- * Generated: 2026-08-02T11:31:07.315Z
+ * Generated: 2026-08-02T11:32:29.734Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -83,7 +83,7 @@ var HEADERS = {
 };
 var KNOWN_DOMAINS = [
   "https://dizipal2107.com",
-  "https://dizipal2068.com"
+  "https://dizipal2108.com"
 ];
 var _resolvedUrl = null;
 function resolveMainUrl() {
