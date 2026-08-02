@@ -1,6 +1,6 @@
 /**
  * patronhdfcehennemi - Built from src/patronhdfcehennemi/
- * Generated: 2026-04-29T15:14:47.825Z
+ * Generated: 2026-08-02T11:05:15.594Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -272,96 +272,86 @@ function unpackEvalBlock(block) {
     return "";
   }
 }
-function decodeDcHello(parts) {
-  const s = parts.join("");
-  const rot13String = (value) => value.replace(/[A-Za-z]/g, (char) => {
-    const base = char <= "Z" ? 65 : 97;
-    return String.fromCharCode((char.charCodeAt(0) - base + 13) % 26 + base);
-  });
-  const reverseString = (value) => value.split("").reverse().join("");
-  const base64ToBinary = (value) => {
-    try {
-      const decoded = atob(value);
-      return Uint8Array.from(decoded, (char) => char.charCodeAt(0));
-    } catch (_) {
-      return null;
+function decodeDcHello(parts, unpackedScript = "") {
+  try {
+    const moduloMatch = unpackedScript.match(/(\d+)\s*%\s*\(i\s*\+\s*(\d+)\)/);
+    const magicNum = moduloMatch ? parseInt(moduloMatch[1], 10) : 399756995;
+    const magicOffset = moduloMatch ? parseInt(moduloMatch[2], 10) : 5;
+    let funcBody = unpackedScript;
+    if (unpackedScript.includes("function dc_")) {
+      funcBody = unpackedScript.split("function dc_")[1];
+      if (funcBody.includes("function d1x")) {
+        funcBody = funcBody.split("function d1x")[0];
+      }
     }
-  };
-  const binaryToAscii = (bytes) => String.fromCharCode(...bytes);
-  const rot13Bytes = (bytes) => Uint8Array.from(bytes, (byte) => {
-    let code = byte;
-    if (code >= 97 && code <= 122)
-      code = (code - 97 + 13) % 26 + 97;
-    else if (code >= 65 && code <= 90)
-      code = (code - 65 + 13) % 26 + 65;
-    return code;
-  });
-  const reverseBytes = (bytes) => Uint8Array.from([...bytes].reverse());
-  const unmix = (bytes) => {
-    let out = "";
-    for (let i = 0; i < bytes.length; i++) {
-      const newChar = (bytes[i] - 399756995 % (i + 5) + 256) % 256;
-      out += String.fromCharCode(newChar);
+    const operations = [];
+    let index = funcBody.indexOf("atob(");
+    while (index >= 0) {
+      operations.push({ index, type: "atob" });
+      index = funcBody.indexOf("atob(", index + 1);
     }
-    return out;
-  };
-  const isValid = (value) => {
-    if (!value || value.length < 10)
-      return false;
-    if (/[\x00-\x08\x0E-\x1F]/.test(value))
-      return false;
-    return /^https?:\/\//i.test(value) || value.includes("m3u8") || value.includes("mp4");
-  };
-  const strategies = [
-    () => {
-      const bytes = base64ToBinary(reverseString(rot13String(s)));
-      return bytes ? unmix(bytes) : "";
-    },
-    () => {
-      const bytes = base64ToBinary(rot13String(s));
-      return bytes ? unmix(reverseBytes(bytes)) : "";
-    },
-    () => {
-      const bytes = base64ToBinary(reverseString(s));
-      return bytes ? unmix(rot13Bytes(bytes)) : "";
-    },
-    () => {
-      const bytes = base64ToBinary(rot13String(reverseString(s)));
-      return bytes ? unmix(bytes) : "";
-    },
-    () => {
-      const bytes = base64ToBinary(s);
-      return bytes ? unmix(reverseBytes(rot13Bytes(bytes))) : "";
-    },
-    () => {
-      const bytes = base64ToBinary(reverseString(s));
-      if (!bytes)
-        return "";
-      const nested = base64ToBinary(binaryToAscii(bytes));
-      return nested ? unmix(nested) : "";
-    },
-    () => {
-      const bytes = base64ToBinary(s);
-      return bytes ? unmix(rot13Bytes(reverseBytes(bytes))) : "";
-    },
-    () => {
-      const bytes = base64ToBinary(reverseString(rot13String(s)));
-      if (!bytes)
-        return "";
-      const nested = base64ToBinary(binaryToAscii(bytes));
-      return nested ? unmix(nested) : "";
+    index = funcBody.indexOf("reverse");
+    while (index >= 0) {
+      operations.push({ index, type: "reverse" });
+      index = funcBody.indexOf("reverse", index + 1);
     }
-  ];
-  for (const strategy of strategies) {
-    try {
-      const result = strategy();
-      if (isValid(result))
-        return result;
-    } catch (_) {
-      continue;
+    index = funcBody.indexOf("replace");
+    while (index >= 0) {
+      const block2 = funcBody.substring(index, Math.min(index + 300, funcBody.length));
+      let shift = 13;
+      const rotShiftMatch = block2.match(/charCodeAt\(0\)\s*\+\s*(\d+)/);
+      if (rotShiftMatch) {
+        shift = parseInt(rotShiftMatch[1], 10);
+      } else {
+        const rotShiftMatch2 = block2.match(/o\s*-\s*base\s*([+-])\s*(\d+)/);
+        if (rotShiftMatch2) {
+          const sign = rotShiftMatch2[1];
+          const num = parseInt(rotShiftMatch2[2], 10);
+          shift = sign === "-" ? (26 - num) % 26 : num;
+        }
+      }
+      operations.push({ index, type: "rot", shift });
+      index = funcBody.indexOf("replace", index + 1);
     }
+    operations.sort((a, b) => a.index - b.index);
+    let result = parts.join("");
+    for (const op of operations) {
+      if (op.type === "reverse") {
+        result = result.split("").reverse().join("");
+      } else if (op.type === "atob") {
+        while (result.length % 4 !== 0) {
+          result += "=";
+        }
+        result = atob(result);
+      } else if (op.type === "rot") {
+        const shift = op.shift;
+        let rotStr = "";
+        for (let i = 0; i < result.length; i++) {
+          const char = result[i];
+          if (char >= "a" && char <= "z") {
+            const shifted = char.charCodeAt(0) + shift;
+            rotStr += String.fromCharCode(shifted > 122 ? shifted - 26 : shifted);
+          } else if (char >= "A" && char <= "Z") {
+            const shifted = char.charCodeAt(0) + shift;
+            rotStr += String.fromCharCode(shifted > 90 ? shifted - 26 : shifted);
+          } else {
+            rotStr += char;
+          }
+        }
+        result = rotStr;
+      }
+    }
+    let unmix = "";
+    for (let i = 0; i < result.length; i++) {
+      const charCode = result.charCodeAt(i);
+      const newChar = (charCode - magicNum % (i + magicOffset) + 256) % 256;
+      unmix += String.fromCharCode(newChar);
+    }
+    return unmix;
+  } catch (e) {
+    console.error(`[${PROVIDER_NAME}] decodeDcHello hatasi:`, e.message);
+    return "";
   }
-  return "";
 }
 function parseQuotedArray(arraySource) {
   const values = [];
@@ -380,7 +370,7 @@ ${unpacked}`;
   const fileLinkMatch = combined.match(/file_link\s*=\s*"([^"]+)";/i);
   if (fileLinkMatch) {
     const parts = parseQuotedArray(fileLinkMatch[1]);
-    const decoded = decodeDcHello(parts);
+    const decoded = decodeDcHello(parts, combined);
     if (decoded)
       return decoded.startsWith("http") ? decoded : `https${decoded.substring(decoded.indexOf("://"))}`;
   }
@@ -390,7 +380,7 @@ ${unpacked}`;
     const varMatch = combined.match(varRegex);
     if (varMatch) {
       const parts = parseQuotedArray(varMatch[1]);
-      const decoded = decodeDcHello(parts);
+      const decoded = decodeDcHello(parts, combined);
       if (decoded)
         return decoded;
     }
