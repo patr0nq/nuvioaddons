@@ -1,6 +1,6 @@
 /**
  * patronJetFilmizle - Built from src/patronJetFilmizle/
- * Generated: 2026-08-02T11:53:29.314Z
+ * Generated: 2026-08-02T12:00:55.577Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -76,7 +76,7 @@ module.exports = __toCommonJS(patronJetFilmizle_exports);
 var import_cheerio_without_node_native2 = __toESM(require("cheerio-without-node-native"));
 
 // src/patronJetFilmizle/http.js
-var MAIN_URL = "https://jetfilmizle.net";
+var MAIN_URL = "https://jetfilmizle.now";
 var HEADERS = {
   "Referer": `${MAIN_URL}/`,
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
