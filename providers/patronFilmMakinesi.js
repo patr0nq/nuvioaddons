@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-05-04T16:03:59.979Z
+ * Generated: 2026-08-02T11:11:14.487Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -242,16 +242,35 @@ function decryptNative(html) {
     const funcStartIdx = scriptContent.indexOf("function dc_");
     const funcEndIdx = scriptContent.indexOf("function d1x()", funcStartIdx);
     const functionBody = funcStartIdx !== -1 ? scriptContent.substring(funcStartIdx, funcEndIdx !== -1 ? funcEndIdx : scriptContent.length) : scriptContent;
+    let rotShift = 13;
     const rotShiftMatch = functionBody.match(/charCodeAt\(0\)\s*\+\s*(\d+)/);
-    const rotShift = (rotShiftMatch == null ? void 0 : rotShiftMatch[1]) ? Number(rotShiftMatch[1]) : 13;
-    const reverseIdx = functionBody.indexOf(".reverse()");
-    const atobIdx = functionBody.indexOf("atob(");
-    const rotIdx = functionBody.indexOf(".replace(");
-    const operations = [
-      { idx: reverseIdx, op: "reverse" },
-      { idx: atobIdx, op: "atob" },
-      { idx: rotIdx, op: "rot" }
-    ].filter((x) => x.idx !== -1 && x.idx !== void 0).sort((a, b) => a.idx - b.idx);
+    if (rotShiftMatch) {
+      rotShift = Number(rotShiftMatch[1]);
+    } else {
+      const rotShiftMatch2 = functionBody.match(/o\s*-\s*base\s*([+-])\s*(\d+)/);
+      if (rotShiftMatch2) {
+        const sign = rotShiftMatch2[1];
+        const num = Number(rotShiftMatch2[2]);
+        rotShift = sign === "-" ? (26 - num) % 26 : num;
+      }
+    }
+    const operations = [];
+    let idx = functionBody.indexOf("atob(");
+    while (idx >= 0) {
+      operations.push({ idx, op: "atob" });
+      idx = functionBody.indexOf("atob(", idx + 1);
+    }
+    idx = functionBody.indexOf("reverse");
+    while (idx >= 0) {
+      operations.push({ idx, op: "reverse" });
+      idx = functionBody.indexOf("reverse", idx + 1);
+    }
+    idx = functionBody.indexOf("replace");
+    while (idx >= 0) {
+      operations.push({ idx, op: "rot" });
+      idx = functionBody.indexOf("replace", idx + 1);
+    }
+    operations.sort((a, b) => a.idx - b.idx);
     let result = parts.join("");
     for (const { op } of operations) {
       if (op === "reverse")
