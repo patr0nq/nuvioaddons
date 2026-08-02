@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-08-02T11:11:14.487Z
+ * Generated: 2026-08-02T11:38:20.285Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -123,81 +123,33 @@ function fixUrl(url) {
 // src/patronFilmMakinesi/tmdb.js
 var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
 var PROVIDER_TAG = "[PatronFilmMakinesi]";
-function getTmdbTitleFromHtml(tmdbId, mediaType) {
+function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
     try {
       const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `https://www.themoviedb.org/${type}/${tmdbId}?language=tr-TR`;
+      const url = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
       const response = yield fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+          "Accept": "application/json"
         }
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const html = yield response.text();
-      let trTitle = "";
-      const ogMatch = html.match(/<meta property="og:title" content="([^"]+)">/);
-      if (ogMatch) {
-        trTitle = ogMatch[1];
-      } else {
-        const titleMatch = html.match(/<title>([^<]+)<\/title>/);
-        if (titleMatch) {
-          trTitle = titleMatch[1].split("(")[0].split("\u2014")[0].trim();
-        }
-      }
-      let origTitle = trTitle;
-      const origMatch = html.match(/<h3 class="caption" dir="auto">([^<]+)<\/h3>/) || html.match(/<strong class="original_title">([^<]+)<\/strong>/);
-      if (origMatch) {
-        const cleaned = origMatch[1].replace("Orijinal Ad\u0131", "").trim();
-        if (cleaned.length > 0)
-          origTitle = cleaned;
-      }
-      if (!trTitle)
-        return null;
-      console.log(`${PROVIDER_TAG} [HTML] Baslik bulundu: ${trTitle}`);
-      return { trTitle, origTitle };
-    } catch (e) {
-      console.warn(`${PROVIDER_TAG} [HTML] Scraping basarisiz: ${e.message}`);
-      return null;
-    }
-  });
-}
-function getTmdbTitleFromApi(tmdbId, mediaType) {
-  return __async(this, null, function* () {
-    try {
-      const type = mediaType === "movie" ? "movie" : "tv";
-      const url = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
-      const response = yield fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
       const data = yield response.json();
-      const trTitle = data.title || data.name || "";
-      const origTitle = data.original_title || data.original_name || trTitle;
-      if (!trTitle)
-        return null;
+      let trTitle = type === "movie" ? data.title : data.name;
+      let origTitle = type === "movie" ? data.original_title : data.original_name;
+      if (!trTitle) {
+        trTitle = origTitle;
+      }
+      trTitle = (trTitle == null ? void 0 : trTitle.trim()) || "";
+      origTitle = (origTitle == null ? void 0 : origTitle.trim()) || "";
       console.log(`${PROVIDER_TAG} [API] Baslik bulundu: ${trTitle}`);
       return { trTitle, origTitle };
     } catch (e) {
       console.warn(`${PROVIDER_TAG} [API] REST API basarisiz: ${e.message}`);
-      return null;
+      return { trTitle: "", origTitle: "" };
     }
-  });
-}
-function getTmdbTitle(tmdbId, mediaType) {
-  return __async(this, null, function* () {
-    const htmlResult = yield getTmdbTitleFromHtml(tmdbId, mediaType);
-    if (htmlResult)
-      return htmlResult;
-    console.log(`${PROVIDER_TAG} HTML scraping basarisiz, TMDB REST API deneniyor...`);
-    const apiResult = yield getTmdbTitleFromApi(tmdbId, mediaType);
-    if (apiResult)
-      return apiResult;
-    console.error(`${PROVIDER_TAG} Her iki yontem de basarisiz oldu: TMDB ID=${tmdbId}`);
-    return { trTitle: "", origTitle: "" };
   });
 }
 
