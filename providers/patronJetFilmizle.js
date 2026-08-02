@@ -1,6 +1,6 @@
 /**
  * patronJetFilmizle - Built from src/patronJetFilmizle/
- * Generated: 2026-08-02T12:00:55.577Z
+ * Generated: 2026-08-02T12:18:30.268Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -152,10 +152,11 @@ function getD2rsLink(iframeUrl) {
   return __async(this, null, function* () {
     try {
       const apiUrl = iframeUrl.replace("/?", "/get_video.php?");
-      const response = yield fetch(apiUrl, {
+      const response = yield fetchWithResponse(apiUrl, {
         headers: { "Referer": MAIN_URL }
       });
-      const data = yield response.json();
+      const text = yield response.text();
+      const data = JSON.parse(text);
       if (data && data.success && data.masterUrl) {
         return {
           url: data.masterUrl,
@@ -181,6 +182,39 @@ function getPixeldrainLink(pdUrl) {
     return null;
   }
 }
+function getJetvLink(iframeUrl) {
+  return __async(this, null, function* () {
+    try {
+      const html = yield fetchText(iframeUrl);
+      const match = html.match(/"sources":\s*\[(.*?)\]/);
+      if (match && match[1]) {
+        let sourceStr = `{${match[1]}}`;
+        sourceStr = sourceStr.replace(/'/g, '"').replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":');
+        try {
+          const son = JSON.parse(sourceStr);
+          if (son.file) {
+            return {
+              url: son.file,
+              label: son.label || "Jetv"
+            };
+          }
+        } catch (e) {
+          const fileMatch = match[1].match(/file\s*:\s*["']([^"']+)["']/);
+          const labelMatch = match[1].match(/label\s*:\s*["']([^"']+)["']/);
+          if (fileMatch) {
+            return {
+              url: fileMatch[1],
+              label: labelMatch ? labelMatch[1] : "Jetv"
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`${PROVIDER_TAG2} Jetv hatasi: ${e.message}`);
+    }
+    return null;
+  });
+}
 function extractFromMoviePage(movieUrl) {
   return __async(this, null, function* () {
     const streams = [];
@@ -188,40 +222,51 @@ function extractFromMoviePage(movieUrl) {
       console.log(`${PROVIDER_TAG2} Film Sayfasi Taran\u0131yor: ${movieUrl}`);
       const html = yield fetchText(movieUrl);
       const $ = import_cheerio_without_node_native.default.load(html);
-      const iframes = $("div#active-player iframe, div.player-container iframe, iframe");
-      for (let i = 0; i < iframes.length; i++) {
-        const iframe = iframes.eq(i);
-        let src = iframe.attr("data-litespeed-src") || iframe.attr("src");
-        if (src) {
-          src = fixUrl(src);
-          if (src.includes("d2rs")) {
-            const d2rsData = yield getD2rsLink(src);
-            if (d2rsData) {
-              streams.push({
-                name: "PatronJetFilmizle - D2RS",
-                title: "D2RS | Auto",
-                url: d2rsData.url,
-                quality: "Auto",
-                type: "hls",
-                headers: { "Referer": d2rsData.referer, "User-Agent": HEADERS["User-Agent"] }
-              });
-            }
-          } else if (!src.includes("youtube")) {
-            streams.push({
-              name: `PatronJetFilmizle - Iframe`,
-              title: `Sunucu | Auto`,
-              url: src,
-              quality: "Auto",
-              headers: { "Referer": movieUrl, "User-Agent": HEADERS["User-Agent"] }
-            });
+      const iframes = [];
+      const iframeElement = $("div#active-player iframe, div.player-container iframe").first();
+      let iframeSrc = iframeElement.attr("data-litespeed-src") || iframeElement.attr("src");
+      if (iframeSrc) {
+        iframeSrc = fixUrl(iframeSrc);
+        iframes.push(iframeSrc);
+      }
+      $("a.download-btn[href]").each((i, link) => {
+        const href = $(link).attr("href");
+        if (href && href.includes("pixeldrain.com")) {
+          const downloadLink = fixUrl(href);
+          if (downloadLink) {
+            iframes.push(downloadLink);
           }
         }
-      }
-      const pdLinks = $("a.download-btn[href*='pixeldrain.com'], a[href*='pixeldrain.com']");
-      pdLinks.each((i, el) => {
-        const href = $(el).attr("href");
-        if (href) {
-          const pdData = getPixeldrainLink(href);
+      });
+      for (const iframeUrl of iframes) {
+        if (iframeUrl.includes("d2rs")) {
+          console.log(`${PROVIDER_TAG2} D2RS URL bulundu: ${iframeUrl}`);
+          const d2rsData = yield getD2rsLink(iframeUrl);
+          if (d2rsData) {
+            streams.push({
+              name: "PatronJetFilmizle - D2RS",
+              title: "D2RS | Auto",
+              url: d2rsData.url,
+              quality: "Auto",
+              type: "hls",
+              headers: { "Referer": d2rsData.referer, "User-Agent": HEADERS["User-Agent"] }
+            });
+          }
+        } else if (iframeUrl.includes("jetv.xyz")) {
+          console.log(`${PROVIDER_TAG2} Jetv URL bulundu: ${iframeUrl}`);
+          const jetvData = yield getJetvLink(iframeUrl);
+          if (jetvData) {
+            streams.push({
+              name: `PatronJetFilmizle - Jetv - ${jetvData.label}`,
+              title: `Jetv - ${jetvData.label} | Auto`,
+              url: jetvData.url,
+              quality: "Auto",
+              type: "hls",
+              headers: { "User-Agent": HEADERS["User-Agent"] }
+            });
+          }
+        } else if (iframeUrl.includes("pixeldrain.com")) {
+          const pdData = getPixeldrainLink(iframeUrl);
           if (pdData) {
             streams.push({
               name: "PatronJetFilmizle - PixelDrain",
@@ -231,8 +276,16 @@ function extractFromMoviePage(movieUrl) {
               headers: { "Referer": pdData.referer, "User-Agent": HEADERS["User-Agent"] }
             });
           }
+        } else if (!iframeUrl.includes("youtube")) {
+          streams.push({
+            name: `PatronJetFilmizle - Iframe`,
+            title: `Sunucu | Auto`,
+            url: iframeUrl,
+            quality: "Auto",
+            headers: { "Referer": movieUrl, "User-Agent": HEADERS["User-Agent"] }
+          });
         }
-      });
+      }
       const uniqueStreams = [];
       const seen = /* @__PURE__ */ new Set();
       for (const stream of streams) {
@@ -266,49 +319,76 @@ function getStreams(tmdbId, type, season, episode) {
       let movieUrl = null;
       for (const query of queries) {
         console.log(`${PROVIDER_TAG3} Aran\u0131yor: "${query}"`);
-        const searchUrl = `${MAIN_URL}/?s=${encodeURIComponent(query)}`;
+        let results = [];
         try {
-          const searchHtml = yield fetchText(searchUrl);
+          const searchUrl = `${MAIN_URL}/arama?q=`;
+          const searchRes = yield fetchWithResponse(searchUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "Referer": `${MAIN_URL}/`
+            },
+            body: new URLSearchParams({ s: query }).toString()
+          });
+          const searchHtml = yield searchRes.text();
           const $ = import_cheerio_without_node_native2.default.load(searchHtml);
-          const results = [];
-          $("div.film-card, div.card, article").each((i, el) => {
-            const anchor = $(el).find("a").first();
-            const href = anchor.attr("href");
-            let title = $(el).find(".card-title a, .film-title, h2, h3").text().trim();
-            if (!title && anchor.attr("title"))
-              title = anchor.attr("title").trim();
+          $("div.film-card").each((i, el) => {
+            const anchor = $(el).find(".card-title a").first();
+            let href = anchor.attr("href");
+            if (!href)
+              href = $(el).find("a").first().attr("href");
+            let title = anchor.text().trim();
+            if (!title)
+              title = $(el).find("h2, h3").text().trim();
             if (title && href) {
-              results.push({ title: title.replace(" izle", "").trim(), href: fixUrl(href) });
+              title = title.replace(/ izle$/i, "").trim();
+              results.push({ title, href: fixUrl(href) });
             }
           });
-          if (results.length > 0) {
-            const queryLower = query.toLowerCase();
-            const normalize = (str) => (str || "").toLowerCase().replace(/[^a-z0-9ğüşıöç]/g, "");
-            const cleanQ = normalize(queryLower);
-            let exactMatch = results.find((r) => normalize(r.title) === cleanQ);
-            if (!exactMatch) {
-              exactMatch = results.find((r) => normalize(r.title).includes(cleanQ) || cleanQ.includes(normalize(r.title)));
-            }
-            if (exactMatch) {
-              movieUrl = exactMatch.href;
-              console.log(`${PROVIDER_TAG3} E\u015Fle\u015Fme bulundu: ${exactMatch.title} -> ${movieUrl}`);
-              break;
-            } else if (results.length > 0) {
-              movieUrl = results[0].href;
-              console.log(`${PROVIDER_TAG3} Yak\u0131n e\u015Fle\u015Fme kullan\u0131l\u0131yor: ${results[0].title} -> ${movieUrl}`);
-              break;
-            }
-          }
         } catch (err) {
-          console.warn(`${PROVIDER_TAG3} Arama hatasi (${query}): ${err.message}`);
+          console.warn(`${PROVIDER_TAG3} POST Arama hatasi (${query}): ${err.message}`);
+        }
+        if (results.length === 0) {
+          console.log(`${PROVIDER_TAG3} Fallback GET Aran\u0131yor: "${query}"`);
+          try {
+            const searchUrl = `${MAIN_URL}/?s=${encodeURIComponent(query)}`;
+            const searchHtml = yield fetchText(searchUrl);
+            const $ = import_cheerio_without_node_native2.default.load(searchHtml);
+            $("div.film-card, article.item, div.card").each((i, el) => {
+              const anchor = $(el).find(".card-title a, a").first();
+              const href = anchor.attr("href");
+              let title = $(el).find(".card-title a, .film-title, h2, h3, a").text().trim();
+              if (title && href) {
+                title = title.replace(/ izle$/i, "").trim();
+                results.push({ title, href: fixUrl(href) });
+              }
+            });
+          } catch (err) {
+            console.warn(`${PROVIDER_TAG3} GET Arama hatasi (${query}): ${err.message}`);
+          }
+        }
+        if (results.length > 0) {
+          const queryLower = query.toLowerCase();
+          const normalize = (str) => (str || "").toLowerCase().replace(/[^a-z0-9ğüşıöç]/g, "");
+          const cleanQ = normalize(queryLower);
+          let exactMatch = results.find((r) => normalize(r.title) === cleanQ);
+          if (!exactMatch) {
+            exactMatch = results.find((r) => normalize(r.title).includes(cleanQ) || cleanQ.includes(normalize(r.title)));
+          }
+          if (exactMatch) {
+            movieUrl = exactMatch.href;
+            console.log(`${PROVIDER_TAG3} E\u015Fle\u015Fme bulundu: ${exactMatch.title} -> ${movieUrl}`);
+            break;
+          } else {
+            movieUrl = results[0].href;
+            console.log(`${PROVIDER_TAG3} Yak\u0131n e\u015Fle\u015Fme kullan\u0131l\u0131yor: ${results[0].title} -> ${movieUrl}`);
+            break;
+          }
         }
       }
       if (!movieUrl) {
         console.warn(`${PROVIDER_TAG3} \u0130cerik bulunamadi.`);
         return [];
-      }
-      if (type === "tv") {
-        console.warn(`${PROVIDER_TAG3} Dizi b\xF6l\xFCm\xFC mant\u0131\u011F\u0131 tam desteklenmiyor, film sayfas\u0131 gibi taranacak.`);
       }
       const streams = yield extractFromMoviePage(movieUrl);
       return streams;
