@@ -1,6 +1,6 @@
 /**
  * patronDizipal - Built from src/patronDizipal/
- * Generated: 2026-08-02T11:32:29.734Z
+ * Generated: 2026-08-02T11:35:31.602Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -254,175 +254,179 @@ function getTmdbTitle(tmdbId, mediaType) {
 // src/patronDizipal/extractor.js
 var import_crypto_js = __toESM(require("crypto-js"));
 var PROVIDER_TAG2 = "[Dizipal]";
-var PASSPHRASE = "3hPn4uCjTVtfYWcjIcoJQ4cL1WWk1qxXI39egLYOmNv6IblA7eKJz68uU3eLzux1biZLCms0quEjTYniGv5z1JcKbNIsDQFSeIZOBZJz4is6pD7UyWDggWWzTLBQbHcQFpBQdClnuQaMNUHtLHTpzCvZy33p6I7wFBvL4fnXBYH84aUIyWGTRvM2G5cfoNf4705tO2kv";
 function resolveDizipal(url, activeUrl) {
   return __async(this, null, function* () {
     try {
       const siteUrl = activeUrl || MAIN_URL;
-      console.log(`${PROVIDER_TAG2} \xC7\xF6z\xFCmleniyor: ${url}`);
-      const response = yield fetchWithResponse(url, {
-        headers: { "Referer": siteUrl }
+      console.log(`${PROVIDER_TAG2} Oynat\u0131lacak B\xF6l\xFCm Linki \xBB ${url}`);
+      const userAgent = HEADERS["User-Agent"];
+      const getResponse = yield fetch(url, {
+        headers: {
+          "User-Agent": userAgent,
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        },
+        redirect: "manual"
       });
-      const html = yield response.text();
-      let iframeUrl = "";
-      const encMatch = html.match(/<div[^>]*data-rm-k=["']true["'][^>]*>([\s\S]*?)<\/div>/i);
-      if (encMatch && encMatch[1]) {
-        console.log(`${PROVIDER_TAG2} \u015Eifreli veri bulundu, \xE7\xF6z\xFCl\xFCyor...`);
-        const unescapeHtml = (str) => {
-          return str.replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'");
-        };
-        const cleanStr = unescapeHtml(encMatch[1]);
-        const decryptedUrl = decryptDizipalData(cleanStr);
-        if (decryptedUrl) {
-          iframeUrl = decryptedUrl;
-          console.log(`${PROVIDER_TAG2} \xC7\xF6z\xFClen Iframe: ${iframeUrl}`);
-        } else {
-          console.log(`${PROVIDER_TAG2} \u015Eifre \xE7\xF6zme i\u015Flemi ba\u015Far\u0131s\u0131z oldu.`);
-        }
-      }
-      if (!iframeUrl) {
-        console.log(`${PROVIDER_TAG2} Fallback iframe aran\u0131yor...`);
-        const iframeMatch = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-        if (iframeMatch && iframeMatch[1]) {
-          iframeUrl = iframeMatch[1];
-          console.log(`${PROVIDER_TAG2} Fallback Iframe bulundu: ${iframeUrl}`);
-        }
-      }
-      if (!iframeUrl) {
-        console.error(`${PROVIDER_TAG2} Hi\xE7 iframe bulunamad\u0131.`);
+      const html = yield getResponse.text();
+      const configTokenMatch = html.match(/<div[^>]*id=["']videoContainer["'][^>]*data-cfg=["']([^"']+)["']/i);
+      const configToken = configTokenMatch ? configTokenMatch[1].trim() : null;
+      if (!configToken) {
+        console.error(`${PROVIDER_TAG2} Sayfadan video config token'\u0131 (data-cfg) al\u0131namad\u0131!`);
         return null;
       }
-      if (iframeUrl.startsWith("//")) {
-        iframeUrl = `https:${iframeUrl}`;
-      }
-      console.log(`${PROVIDER_TAG2} Player URL taran\u0131yor: ${iframeUrl}`);
-      let domain = "https://dplayer82.site";
-      try {
-        domain = new URL(iframeUrl).origin;
-      } catch (e) {
-      }
-      const vParamMatch = iframeUrl.match(/[?&]v=([a-f0-9A-F]+)/);
-      let playlistId = vParamMatch ? vParamMatch[1] : null;
-      const directRe = /(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i;
-      let directMatch = null;
-      if (playlistId) {
-        console.log(`${PROVIDER_TAG2} URL'den ID al\u0131nd\u0131: ${playlistId}`);
+      let cookies = "";
+      if (typeof getResponse.headers.getSetCookie === "function") {
+        cookies = getResponse.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
       } else {
-        try {
-          const playerRes = yield fetchWithResponse(iframeUrl, {
-            headers: { "Referer": url, "Origin": domain }
-          });
-          const playerHtml = yield playerRes.text();
-          const openPlayerMatch = playerHtml.match(/window\.openPlayer\s*\(\s*['"]([^'"]+)['"]/);
-          if (openPlayerMatch && openPlayerMatch[1]) {
-            playlistId = openPlayerMatch[1];
-            console.log(`${PROVIDER_TAG2} openPlayer ID: ${playlistId}`);
-          } else {
-            directMatch = playerHtml.match(directRe);
-            if (directMatch && directMatch[1]) {
-              console.log(`${PROVIDER_TAG2} Bulundu (Direct): ${directMatch[1]}`);
-              return {
-                url: directMatch[1],
-                quality: "Auto",
-                headers: { "Referer": iframeUrl }
-              };
-            }
-          }
-        } catch (e) {
-          console.log(`${PROVIDER_TAG2} Player sayfas\u0131 \xE7ekilemedi (CF olabilir): ${e.message}`);
+        const rawSetCookie = getResponse.headers.get("set-cookie");
+        if (rawSetCookie) {
+          cookies = rawSetCookie.split(/, (?=[A-Za-z0-9_]+=)/).map((c) => c.split(";")[0]).join("; ");
         }
       }
-      if (playlistId) {
-        const apiUrl = `${domain}/source2.php?v=${playlistId}`;
-        console.log(`${PROVIDER_TAG2} API sorgulan\u0131yor: ${apiUrl}`);
-        try {
-          const apiRes = yield fetchWithResponse(apiUrl, {
-            headers: __spreadProps(__spreadValues({}, HEADERS), {
-              "Origin": domain,
-              "Referer": iframeUrl,
-              "X-Requested-With": "XMLHttpRequest",
-              "Accept": "application/json, text/javascript, */*; q=0.01",
-              "Sec-Fetch-Mode": "cors",
-              "Sec-Fetch-Site": "same-origin",
-              "Sec-GPC": "1"
-            })
-          });
-          const apiText = yield apiRes.text();
-          const fileMatch = apiText.match(/"file"\s*:\s*"([^"]+)"/);
+      console.log(`${PROVIDER_TAG2} Bulunan Token \xBB ${configToken}`);
+      console.log(`${PROVIDER_TAG2} Yakalanan \xC7erezler \xBB ${cookies}`);
+      const postData = new URLSearchParams();
+      postData.append("cfg", configToken);
+      const configResponse = yield fetch(`${siteUrl}/ajax-player-config`, {
+        method: "POST",
+        headers: {
+          "User-Agent": userAgent,
+          "Accept": "*/*",
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": siteUrl,
+          "Cookie": cookies,
+          "Referer": url
+        },
+        body: postData.toString()
+      });
+      const configResponseRaw = yield configResponse.text();
+      console.log(`${PROVIDER_TAG2} API Yan\u0131t\u0131 \xBB ${configResponseRaw}`);
+      const embedUrlMatch = configResponseRaw.match(/"v"\s*:\s*"([^"]+)"/);
+      let embedUrlRaw = embedUrlMatch ? embedUrlMatch[1].replace(/\\\//g, "/") : null;
+      if (!embedUrlRaw) {
+        console.error(`${PROVIDER_TAG2} Embed URL config'den al\u0131namad\u0131! D\xF6nen yan\u0131t: ${configResponseRaw}`);
+        return null;
+      }
+      const embedUrl = fixUrl(embedUrlRaw, siteUrl);
+      console.log(`${PROVIDER_TAG2} \xC7\xF6z\xFClen Embed URL \xBB ${embedUrl}`);
+      if (embedUrl.includes("imagestoo")) {
+        const videoId = embedUrl.replace(/\/$/, "").split("/").pop();
+        const imagestooApiUrl = `https://imagestoo.com/player/index.php?data=${videoId}&do=getVideo`;
+        console.log(`${PROVIDER_TAG2} Imagestoo API URL \xBB ${imagestooApiUrl}`);
+        const apiResponse = yield fetch(imagestooApiUrl, {
+          method: "POST",
+          headers: {
+            "User-Agent": userAgent,
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "*/*",
+            "Referer": embedUrl
+          }
+        });
+        let sessionCookie = "";
+        let playerToken = "";
+        if (typeof apiResponse.headers.getSetCookie === "function") {
+          const setCookies = apiResponse.headers.getSetCookie();
+          const tokenCookie = setCookies.find((c) => c.includes("fireplayer_player="));
+          if (tokenCookie) {
+            playerToken = tokenCookie.split(";")[0].split("=")[1];
+          }
+        } else {
+          const rawSetCookie = apiResponse.headers.get("set-cookie");
+          if (rawSetCookie && rawSetCookie.includes("fireplayer_player")) {
+            const cleanCookie = rawSetCookie.split(";")[0];
+            sessionCookie = `${cleanCookie};`;
+          }
+        }
+        if (playerToken) {
+          sessionCookie = `fireplayer_player=${playerToken}`;
+        }
+        console.log(`${PROVIDER_TAG2} Yakalanan Cookie \xBB ${sessionCookie}`);
+        const responseText = yield apiResponse.text();
+        const videoSourceMatch = responseText.match(/"securedLink"\s*:\s*"([^"]+)"/);
+        if (videoSourceMatch && videoSourceMatch[1]) {
+          const cleanUrl = videoSourceMatch[1].replace(/\\\//g, "/");
+          const finalM3u8Url2 = fixUrl(cleanUrl);
+          console.log(`${PROVIDER_TAG2} Imagestoo \xC7\xF6z\xFClen Video Kayna\u011F\u0131 \xBB ${finalM3u8Url2}`);
+          return {
+            url: finalM3u8Url2,
+            quality: "Auto",
+            headers: {
+              "Referer": embedUrl,
+              "Cookie": sessionCookie
+            }
+          };
+        } else {
+          console.error(`${PROVIDER_TAG2} Imagestoo API yan\u0131t\u0131ndan videoSource \xE7\u0131kar\u0131lamad\u0131! Yan\u0131t: ${responseText}`);
+          return null;
+        }
+      }
+      const embedResponse = yield fetch(embedUrl, {
+        headers: {
+          "User-Agent": userAgent,
+          "Referer": url
+        }
+      });
+      const embedSource = yield embedResponse.text();
+      let extractedUrl = null;
+      const sourcesMatch = embedSource.match(/sources\s*:\s*\[\s*\{\s*file\s*:\s*["']([^"']+\.m3u8.*?)["']/i);
+      if (sourcesMatch && sourcesMatch[1]) {
+        extractedUrl = sourcesMatch[1];
+      } else {
+        const vMatch = embedSource.match(/v\s*:\s*["']([^"']+\.html.*?)["']/i);
+        if (vMatch && vMatch[1]) {
+          extractedUrl = vMatch[1];
+        }
+      }
+      if (!extractedUrl) {
+        console.error(`${PROVIDER_TAG2} Embed kayna\u011F\u0131nda ge\xE7erli bir link bulunamad\u0131!`);
+        return null;
+      }
+      let finalM3u8Url = extractedUrl;
+      if (extractedUrl.includes(".html")) {
+        const idMatch = extractedUrl.match(/embed-([^.]+)\.html/);
+        if (idMatch && idMatch[1]) {
+          finalM3u8Url = `https://s2.superadjacentsoddenly.xyz/hls2/01/00007/${idMatch[1]}_,n,h,.urlset/master.m3u8`;
+        } else {
+          console.error(`${PROVIDER_TAG2} HTML linkinden ID ay\u0131klanamad\u0131: ${extractedUrl}`);
+          return null;
+        }
+      }
+      console.log(`${PROVIDER_TAG2} Ba\u015Far\u0131yla \xFCretilen M3U8 URL: ${finalM3u8Url}`);
+      const subtitles = [];
+      const tracksBlockMatch = embedSource.match(new RegExp("tracks\\s*:\\s*\\[(.*?)\\]", "is"));
+      if (tracksBlockMatch && tracksBlockMatch[1]) {
+        const trackItemRegex = new RegExp("\\{(.*?)\\}", "gs");
+        let itemMatch;
+        while ((itemMatch = trackItemRegex.exec(tracksBlockMatch[1])) !== null) {
+          const itemStr = itemMatch[1];
+          const fileMatch = itemStr.match(/file\s*:\s*["']([^"']+)["']/);
+          const labelMatch = itemStr.match(/label\s*:\s*["']([^"']+)["']/);
           if (fileMatch && fileMatch[1]) {
-            let fileUrl = fileMatch[1].replace(/\\\//g, "/");
-            if (fileUrl.startsWith("//")) {
-              fileUrl = `https:${fileUrl}`;
-            } else if (!fileUrl.startsWith("http")) {
-              fileUrl = `https://${fileUrl}`;
+            const fileUrl = fileMatch[1];
+            if (fileUrl.endsWith(".vtt") || fileUrl.endsWith(".srt")) {
+              subtitles.push({
+                label: labelMatch ? labelMatch[1] : "Unknown",
+                file: fixUrl(fileUrl, siteUrl)
+              });
             }
-            if (fileUrl.includes("m.php")) {
-              fileUrl = fileUrl.replace("m.php", "master.m3u8");
-            }
-            console.log(`${PROVIDER_TAG2} Bulundu (API): ${fileUrl}`);
-            return {
-              url: fileUrl,
-              quality: "Auto",
-              headers: { "Referer": iframeUrl }
-            };
           }
-        } catch (e) {
-          console.error(`${PROVIDER_TAG2} API iste\u011Fi ba\u015Far\u0131s\u0131z: ${e.message}`);
         }
       }
-      console.log(`${PROVIDER_TAG2} Iframe URL WebView arac\u0131l\u0131\u011F\u0131yla \xE7\xF6z\xFClmesi i\xE7in g\xF6nderiliyor...`);
       return {
-        url: iframeUrl,
+        url: finalM3u8Url,
         quality: "Auto",
-        headers: { "Referer": url }
+        headers: {
+          "Referer": embedUrl
+        },
+        subtitles: subtitles.length > 0 ? subtitles : void 0
       };
     } catch (e) {
       console.error(`${PROVIDER_TAG2} resolveDizipal hatas\u0131: ${e.message}`);
       return null;
     }
   });
-}
-function decryptDizipalData(rawJsonStr) {
-  try {
-    const ctMatch = rawJsonStr.match(/"ciphertext"\s*:\s*"([^"]+)"/);
-    const ivMatch = rawJsonStr.match(/"iv"\s*:\s*"([^"]+)"/);
-    const saltMatch = rawJsonStr.match(/"salt"\s*:\s*"([^"]+)"/);
-    if (!ctMatch || !ivMatch || !saltMatch) {
-      console.log(`${PROVIDER_TAG2} Eksik AES verisi`);
-      return null;
-    }
-    const ctB64 = ctMatch[1].replace(/\\\//g, "/").replace(/\\n/g, "").replace(/\\/g, "");
-    const ivHex = ivMatch[1].replace(/\\\//g, "/").replace(/\\n/g, "").replace(/\\/g, "");
-    const saltHex = saltMatch[1].replace(/\\\//g, "/").replace(/\\n/g, "").replace(/\\/g, "");
-    const salt = import_crypto_js.default.enc.Hex.parse(saltHex);
-    const iv = import_crypto_js.default.enc.Hex.parse(ivHex);
-    const key = import_crypto_js.default.PBKDF2(PASSPHRASE, salt, {
-      keySize: 256 / 32,
-      iterations: 999,
-      hasher: import_crypto_js.default.algo.SHA512
-    });
-    const decrypted = import_crypto_js.default.AES.decrypt(ctB64, key, {
-      iv,
-      mode: import_crypto_js.default.mode.CBC,
-      padding: import_crypto_js.default.pad.Pkcs7
-    });
-    let finalUrl = decrypted.toString(import_crypto_js.default.enc.Utf8);
-    if (!finalUrl) {
-      return null;
-    }
-    finalUrl = finalUrl.replace(/\\\//g, "/");
-    if (finalUrl.startsWith("://")) {
-      finalUrl = `https${finalUrl}`;
-    } else if (finalUrl.startsWith("//")) {
-      finalUrl = `https:${finalUrl}`;
-    } else if (!finalUrl.startsWith("http")) {
-      finalUrl = `https://${finalUrl}`;
-    }
-    return finalUrl;
-  } catch (e) {
-    console.error(`${PROVIDER_TAG2} \u015Eifre \xE7\xF6zme hatas\u0131: ${e.message}`);
-    return null;
-  }
 }
 
 // src/patronDizipal/index.js
@@ -442,36 +446,30 @@ function getStreams(tmdbId, type, season, episode) {
       const matchType = type === "movie" ? "Film" : "Dizi";
       const queries = [...new Set([trTitle, origTitle, shortTitle].filter((q) => q && q.length > 1))];
       let match = null;
-      const mainHtml = yield fetchText(`${activeUrl}/`);
-      const cKeyMatch = mainHtml.match(/name=["']cKey["'][^>]*value=["']([^"']+)["']/i);
-      const cValueMatch = mainHtml.match(/name=["']cValue["'][^>]*value=["']([^"']+)["']/i);
-      const cKey = cKeyMatch ? cKeyMatch[1] : "";
-      const cValue = cValueMatch ? cValueMatch[1] : "";
       for (const query of queries) {
         console.log(`${PROVIDER_TAG3} Aran\u0131yor: "${query}"`);
-        const searchUrl = `${activeUrl}/bg/searchcontent`;
+        const searchUrl = `${activeUrl}/ajax-search?q=${encodeURIComponent(query)}`;
         try {
           const searchRes = yield fetch(searchUrl, {
-            method: "POST",
+            method: "GET",
             headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
+              "Accept": "application/json, text/javascript, */*; q=0.01",
               "X-Requested-With": "XMLHttpRequest",
-              "Referer": `${activeUrl}/`
-            },
-            body: `cKey=${encodeURIComponent(cKey)}&cValue=${encodeURIComponent(cValue)}&searchterm=${encodeURIComponent(query)}`
+              "Referer": `${activeUrl}/`,
+              "User-Agent": HEADERS["User-Agent"]
+            }
           });
           if (!searchRes.ok)
             continue;
           const jsonResponse = yield searchRes.json();
-          const results = (jsonResponse == null ? void 0 : jsonResponse.data) || jsonResponse;
-          const htmlStr = (results == null ? void 0 : results.html) || "";
-          if (!htmlStr)
+          const results = (jsonResponse == null ? void 0 : jsonResponse.results) || [];
+          if (!results.length)
             continue;
-          const itemRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>[\s\S]*?<span class="text-white">([^<]+)<\/span>/ig;
-          let m;
-          while ((m = itemRegex.exec(htmlStr)) !== null) {
-            const href = m[1];
-            const rTitleStr = m[2];
+          for (const item of results) {
+            const rTitleStr = item.title;
+            const href = item.url;
+            if (!rTitleStr || !href)
+              continue;
             const normalize = (str) => (str || "").toLowerCase().replace(/[^a-z0-9ğüşıöç]/g, "");
             const rTitle = normalize(rTitleStr);
             const cleanTr = normalize(trTitle);
@@ -479,7 +477,7 @@ function getStreams(tmdbId, type, season, episode) {
             const cleanSh = normalize(shortTitle);
             const cleanQ = normalize(query);
             const titleMatches = rTitle === cleanTr || rTitle === cleanOrig || rTitle === cleanSh || rTitle === cleanQ || rTitle.includes(cleanQ) || cleanQ.includes(rTitle);
-            if (titleMatches) {
+            if (titleMatches && (type === "movie" && item.type === "Film" || type === "tv" && item.type === "Dizi")) {
               match = { title: rTitleStr, url: href };
               break;
             }
