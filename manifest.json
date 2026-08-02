@@ -107,7 +107,7 @@
         "movie"
       ],
       "filename": "providers/patronHDFilmDelisi.js",
-      "enabled": true,
+      "enabled": false,
       "logo": "https://www.google.com/s2/favicons?domain=hdfilmdelisi.one&sz=%size%",
       "contentLanguage": [
         "tr"
