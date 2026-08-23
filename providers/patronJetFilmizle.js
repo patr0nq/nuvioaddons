@@ -1,6 +1,6 @@
 /**
  * patronJetFilmizle - Built from src/patronJetFilmizle/
- * Generated: 2026-08-23T16:38:54.542Z
+ * Generated: 2026-08-23T16:55:01.499Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -171,8 +171,7 @@ function getD2rsLink(iframeUrl) {
 }
 function getPixeldrainLink(pdUrl) {
   try {
-    const urlParts = pdUrl.replace(/\/$/, "").split("/");
-    const pixelId = urlParts[urlParts.length - 1];
+    const pixelId = pdUrl.replace(/\/$/, "").split("/").pop();
     const downloadLink = `https://pixeldrain.com/api/file/${pixelId}?download`;
     return {
       url: downloadLink,
@@ -241,29 +240,36 @@ function extractFromMoviePage(movieUrl) {
           const sourceName = playerType === "dublaj" ? "Dublaj" : "Altyaz\u0131l\u0131";
           for (let sourceIndex = 0; sourceIndex <= maxIndex; sourceIndex++) {
             try {
-              const response = yield fetchWithResponse(`${MAIN_URL}/jetplayer`, {
+              const response = yield fetch(`${MAIN_URL}/jetplayer`, {
                 method: "POST",
-                headers: {
+                headers: __spreadProps(__spreadValues({}, HEADERS), {
                   "Content-Type": "application/x-www-form-urlencoded",
                   "X-Requested-With": "XMLHttpRequest",
                   "Referer": movieUrl
-                },
+                }),
                 body: new URLSearchParams({
                   film_id: filmId,
                   source_index: sourceIndex.toString(),
                   player_type: playerType
                 }).toString()
               });
+              if (!response.ok)
+                continue;
               const responseText = yield response.text();
-              if (!responseText)
+              if (!responseText || !responseText.trim())
                 continue;
               const $res = import_cheerio_without_node_native.default.load(responseText);
               let iframeSrc = $res("iframe").first().attr("src");
-              if (iframeSrc) {
+              if (!iframeSrc || !iframeSrc.trim())
+                continue;
+              if (iframeSrc.startsWith("//"))
+                iframeSrc = `https:${iframeSrc}`;
+              else
                 iframeSrc = fixUrl(iframeSrc);
-                iframes.push({ url: iframeSrc, typeLabel: sourceName });
-              }
+              console.log(`${PROVIDER_TAG2} iframe bulundu [${playerType}/${sourceIndex}] \xBB ${iframeSrc}`);
+              iframes.push({ url: iframeSrc, typeLabel: sourceName });
             } catch (e) {
+              console.warn(`${PROVIDER_TAG2} jetplayer hata [${playerType}/${sourceIndex}]: ${e.message}`);
             }
           }
         }
