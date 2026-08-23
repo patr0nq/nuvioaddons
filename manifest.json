@@ -325,7 +325,7 @@
     },
     {
       "id": "patron-sinemacx",
-      "name": "Sinemacx",
+      "name": "patronSinemacx",
       "description": "Sinema.gg kaynaklı filmler,@patr0n tarafindan gelistirildi.",
       "version": "1.0.0",
       "author": "patr0n",
@@ -351,26 +351,46 @@
       "supportsExternalPlayer": true
     },
     {
-      "id": "patron-jet-filmizle",
-      "name": "patronJetFilmizle",
-      "description": "JetFilmizle tabanli film saglayicisi. @patr0n tarafindan gelistirildi.",
+      "id": "patron-fullhd-filmizlesene",
+      "name": "patronFullHDFilmizlesene",
+      "description": "FullHDFilmizlesene.now üzerinden Türkçe dublajlı ve altyazılı filmler. @patr0n tarafından geliştirildi.",
       "version": "1.0.0",
       "author": "patr0n",
       "supportedTypes": [
-        "movie",
-        "tv"
+        "movie"
       ],
-      "filename": "providers/patronJetFilmizle.js",
+      "filename": "providers/patronFullHDFilmizlesene.js",
       "enabled": true,
-      "logo": "https://www.google.com/s2/favicons?domain=jetfilmizle.net&sz=64",
+      "logo": "https://www.google.com/s2/favicons?domain=fullhdfilmizlesene.now&sz=64",
       "contentLanguage": [
         "tr"
       ],
       "formats": [
         "m3u8",
-        "mp4",
-        "mkv",
-        "hls"
+        "mp4"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-jet-filmizle",
+      "name": "patronJetFilmizle",
+      "description": "JetFilmizle.com üzerinden Türkçe dublajlı ve altyazılı filmler. @patr0n tarafından geliştirildi.",
+      "version": "1.0.0",
+      "author": "patr0n",
+      "supportedTypes": [
+        "movie"
+      ],
+      "filename": "providers/patronJetFilmizle.js",
+      "enabled": true,
+      "logo": "https://www.google.com/s2/favicons?domain=jetfilmizle.com&sz=64",
+      "contentLanguage": [
+        "tr"
+      ],
+      "formats": [
+        "m3u8",
+        "mp4"
       ],
       "limited": false,
       "disabledPlatforms": [],
