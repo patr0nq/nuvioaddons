@@ -1,6 +1,6 @@
 /**
  * patronFilmMakinesi - Built from src/patronFilmMakinesi/
- * Generated: 2026-08-02T11:38:20.285Z
+ * Generated: 2026-08-23T16:42:50.118Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -188,59 +188,75 @@ function decryptNative(html) {
     if (!(arrayMatch == null ? void 0 : arrayMatch[1]))
       return null;
     const parts = arrayMatch[1].split(",").map((s) => s.trim().replace(/^"|"$/g, "").replace(/\\\//g, "/"));
-    const moduloMatch = scriptContent.match(/(\d+)\s*%\s*\(i\s*\+\s*(\d+)\)/);
-    const magicNum = (moduloMatch == null ? void 0 : moduloMatch[1]) ? Number(moduloMatch[1]) : 399756995;
-    const magicOffset = (moduloMatch == null ? void 0 : moduloMatch[2]) ? Number(moduloMatch[2]) : 5;
     const funcStartIdx = scriptContent.indexOf("function dc_");
     const funcEndIdx = scriptContent.indexOf("function d1x()", funcStartIdx);
     const functionBody = funcStartIdx !== -1 ? scriptContent.substring(funcStartIdx, funcEndIdx !== -1 ? funcEndIdx : scriptContent.length) : scriptContent;
-    let rotShift = 13;
-    const rotShiftMatch = functionBody.match(/charCodeAt\(0\)\s*\+\s*(\d+)/);
-    if (rotShiftMatch) {
-      rotShift = Number(rotShiftMatch[1]);
-    } else {
-      const rotShiftMatch2 = functionBody.match(/o\s*-\s*base\s*([+-])\s*(\d+)/);
-      if (rotShiftMatch2) {
-        const sign = rotShiftMatch2[1];
-        const num = Number(rotShiftMatch2[2]);
-        rotShift = sign === "-" ? (26 - num) % 26 : num;
+    const rotShifts = [];
+    const rotPattern1 = /o\s*-\s*base\s*\+\s*(\d+)/g;
+    let m1;
+    while ((m1 = rotPattern1.exec(functionBody)) !== null) {
+      rotShifts.push(Number(m1[1]));
+    }
+    if (rotShifts.length === 0) {
+      const rotPattern2 = /charCodeAt\(0\)\s*\+\s*(\d+)/g;
+      let m2;
+      while ((m2 = rotPattern2.exec(functionBody)) !== null) {
+        rotShifts.push(Number(m2[1]));
       }
     }
+    let xorAccStart = 0;
+    const xorAccStartMatch = functionBody.match(/var\s+acc\s*=\s*(\d+)/);
+    if (xorAccStartMatch)
+      xorAccStart = Number(xorAccStartMatch[1]);
+    let xorStep = 1;
+    const xorStepMatch = functionBody.match(/acc\s*=\s*\(acc\s*\+\s*(\d+)\)\s*%\s*256/);
+    if (xorStepMatch)
+      xorStep = Number(xorStepMatch[1]);
     const operations = [];
     let idx = functionBody.indexOf("atob(");
     while (idx >= 0) {
       operations.push({ idx, op: "atob" });
       idx = functionBody.indexOf("atob(", idx + 1);
     }
-    idx = functionBody.indexOf("reverse");
+    idx = functionBody.indexOf(".reverse()");
     while (idx >= 0) {
       operations.push({ idx, op: "reverse" });
-      idx = functionBody.indexOf("reverse", idx + 1);
+      idx = functionBody.indexOf(".reverse()", idx + 1);
     }
-    idx = functionBody.indexOf("replace");
+    idx = functionBody.indexOf(".replace(");
+    let rotIdx = 0;
     while (idx >= 0) {
-      operations.push({ idx, op: "rot" });
-      idx = functionBody.indexOf("replace", idx + 1);
+      operations.push({ idx, op: `rot_${rotIdx}` });
+      idx = functionBody.indexOf(".replace(", idx + 1);
+      rotIdx++;
     }
     operations.sort((a, b) => a.idx - b.idx);
     let result = parts.join("");
-    for (const { op } of operations) {
-      if (op === "reverse")
+    for (const opObj of operations) {
+      const { op } = opObj;
+      if (op === "reverse") {
         result = result.split("").reverse().join("");
-      else if (op === "atob")
+      } else if (op === "atob") {
         result = decodeBase64Latin1(result);
-      else if (op === "rot")
-        result = rotN(result, rotShift);
+      } else if (op.startsWith("rot_")) {
+        const shiftIdx = Number(op.replace("rot_", ""));
+        const shift = shiftIdx < rotShifts.length ? rotShifts[shiftIdx] : 13;
+        result = rotN(result, shift);
+      }
     }
+    let acc = xorAccStart;
     let unmix = "";
     for (let i = 0; i < result.length; i++) {
-      const decryptedCode = (result.charCodeAt(i) - magicNum % (i + magicOffset) + 256) % 256;
-      unmix += String.fromCharCode(decryptedCode);
+      const b = result.charCodeAt(i);
+      acc = (acc + xorStep) % 256;
+      const plain = b ^ acc;
+      acc = (acc + b) % 256;
+      unmix += String.fromCharCode(plain);
     }
     if (unmix && /^https?:\/\//i.test(unmix)) {
       return unmix;
     }
-    return null;
+    return unmix;
   } catch (e) {
     console.error("[CloseLoad] decryptNative error:", e == null ? void 0 : e.message);
     return null;
@@ -592,16 +608,15 @@ function searchMovie(query) {
     const html = yield fetchText(searchUrl);
     const $ = import_cheerio_without_node_native.default.load(html);
     const results = [];
-    $("div.item-relative").each((i, el) => {
-      const anchor = $(el).find("a").first();
-      const href = anchor.attr("href");
-      let title = $(el).find("div.title").text().trim();
-      if (!title && anchor.attr("title"))
-        title = anchor.attr("title").trim();
-      if (!title && anchor.attr("data-title"))
-        title = anchor.attr("data-title").trim();
+    $("div.film-list a.item").each((i, el) => {
+      const href = $(el).attr("href");
+      let title = $(el).attr("data-title");
+      if (!title)
+        title = $(el).find("img").attr("alt");
+      if (!title)
+        title = $(el).text().trim();
       if (title && href) {
-        results.push({ title, href: fixUrl(href) });
+        results.push({ title: title.trim(), href: fixUrl(href) });
       }
     });
     if (results.length === 0)

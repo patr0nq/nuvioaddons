@@ -1,6 +1,6 @@
 /**
  * patronJetFilmizle - Built from src/patronJetFilmizle/
- * Generated: 2026-08-02T12:18:30.268Z
+ * Generated: 2026-08-23T16:38:54.542Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -223,29 +223,76 @@ function extractFromMoviePage(movieUrl) {
       const html = yield fetchText(movieUrl);
       const $ = import_cheerio_without_node_native.default.load(html);
       const iframes = [];
-      const iframeElement = $("div#active-player iframe, div.player-container iframe").first();
-      let iframeSrc = iframeElement.attr("data-litespeed-src") || iframeElement.attr("src");
-      if (iframeSrc) {
-        iframeSrc = fixUrl(iframeSrc);
-        iframes.push(iframeSrc);
+      const filmId = $("input[name=film_id]").attr("value");
+      if (filmId) {
+        console.log(`${PROVIDER_TAG2} film_id: ${filmId}`);
+        const playerTypes = ["dublaj", "altyazili"];
+        let maxIndex = 4;
+        const indices = [];
+        $(".player-source-btn").each((i, el) => {
+          const idx = parseInt($(el).attr("data-source-index"));
+          if (!isNaN(idx))
+            indices.push(idx);
+        });
+        if (indices.length > 0) {
+          maxIndex = Math.max(...indices);
+        }
+        for (const playerType of playerTypes) {
+          const sourceName = playerType === "dublaj" ? "Dublaj" : "Altyaz\u0131l\u0131";
+          for (let sourceIndex = 0; sourceIndex <= maxIndex; sourceIndex++) {
+            try {
+              const response = yield fetchWithResponse(`${MAIN_URL}/jetplayer`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                  "X-Requested-With": "XMLHttpRequest",
+                  "Referer": movieUrl
+                },
+                body: new URLSearchParams({
+                  film_id: filmId,
+                  source_index: sourceIndex.toString(),
+                  player_type: playerType
+                }).toString()
+              });
+              const responseText = yield response.text();
+              if (!responseText)
+                continue;
+              const $res = import_cheerio_without_node_native.default.load(responseText);
+              let iframeSrc = $res("iframe").first().attr("src");
+              if (iframeSrc) {
+                iframeSrc = fixUrl(iframeSrc);
+                iframes.push({ url: iframeSrc, typeLabel: sourceName });
+              }
+            } catch (e) {
+            }
+          }
+        }
+      } else {
+        const iframeElement = $("div#active-player iframe, div.player-container iframe").first();
+        let iframeSrc = iframeElement.attr("data-litespeed-src") || iframeElement.attr("src");
+        if (iframeSrc) {
+          iframes.push({ url: fixUrl(iframeSrc), typeLabel: "Auto" });
+        }
       }
       $("a.download-btn[href]").each((i, link) => {
         const href = $(link).attr("href");
         if (href && href.includes("pixeldrain.com")) {
           const downloadLink = fixUrl(href);
           if (downloadLink) {
-            iframes.push(downloadLink);
+            iframes.push({ url: downloadLink, typeLabel: "\u0130ndir" });
           }
         }
       });
-      for (const iframeUrl of iframes) {
+      for (const item of iframes) {
+        const iframeUrl = item.url;
+        const typeLabel = item.typeLabel;
         if (iframeUrl.includes("d2rs")) {
           console.log(`${PROVIDER_TAG2} D2RS URL bulundu: ${iframeUrl}`);
           const d2rsData = yield getD2rsLink(iframeUrl);
           if (d2rsData) {
             streams.push({
               name: "PatronJetFilmizle - D2RS",
-              title: "D2RS | Auto",
+              title: `D2RS | ${typeLabel}`,
               url: d2rsData.url,
               quality: "Auto",
               type: "hls",
@@ -258,7 +305,7 @@ function extractFromMoviePage(movieUrl) {
           if (jetvData) {
             streams.push({
               name: `PatronJetFilmizle - Jetv - ${jetvData.label}`,
-              title: `Jetv - ${jetvData.label} | Auto`,
+              title: `Jetv - ${jetvData.label} | ${typeLabel}`,
               url: jetvData.url,
               quality: "Auto",
               type: "hls",
@@ -270,7 +317,7 @@ function extractFromMoviePage(movieUrl) {
           if (pdData) {
             streams.push({
               name: "PatronJetFilmizle - PixelDrain",
-              title: "PixelDrain | \u0130ndir",
+              title: `PixelDrain | ${typeLabel}`,
               url: pdData.url,
               quality: "Auto",
               headers: { "Referer": pdData.referer, "User-Agent": HEADERS["User-Agent"] }
@@ -279,7 +326,7 @@ function extractFromMoviePage(movieUrl) {
         } else if (!iframeUrl.includes("youtube")) {
           streams.push({
             name: `PatronJetFilmizle - Iframe`,
-            title: `Sunucu | Auto`,
+            title: `Sunucu | ${typeLabel}`,
             url: iframeUrl,
             quality: "Auto",
             headers: { "Referer": movieUrl, "User-Agent": HEADERS["User-Agent"] }
@@ -289,8 +336,9 @@ function extractFromMoviePage(movieUrl) {
       const uniqueStreams = [];
       const seen = /* @__PURE__ */ new Set();
       for (const stream of streams) {
-        if (!seen.has(stream.url)) {
-          seen.add(stream.url);
+        const key = stream.url + stream.title;
+        if (!seen.has(key)) {
+          seen.add(key);
           uniqueStreams.push(stream);
         }
       }

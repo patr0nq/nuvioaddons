@@ -1,6 +1,6 @@
 /**
  * patronDizipal - Built from src/patronDizipal/
- * Generated: 2026-08-02T11:35:31.602Z
+ * Generated: 2026-08-23T16:48:56.584Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -75,15 +75,16 @@ __export(patronDizipal_exports, {
 module.exports = __toCommonJS(patronDizipal_exports);
 
 // src/patronDizipal/http.js
-var MAIN_URL = "https://dizipal2107.com";
+var MAIN_URL = "https://dizipal2115.com";
 var HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
   "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
 };
 var KNOWN_DOMAINS = [
-  "https://dizipal2107.com",
-  "https://dizipal2108.com"
+  "https://dizipal2115.com",
+  "https://dizipal2116.com",
+  "https://dizipal2117.com"
 ];
 var _resolvedUrl = null;
 function resolveMainUrl() {
@@ -265,8 +266,7 @@ function resolveDizipal(url, activeUrl) {
           "User-Agent": userAgent,
           "Cache-Control": "no-cache",
           "Pragma": "no-cache"
-        },
-        redirect: "manual"
+        }
       });
       const html = yield getResponse.text();
       const configTokenMatch = html.match(/<div[^>]*id=["']videoContainer["'][^>]*data-cfg=["']([^"']+)["']/i);
@@ -275,38 +275,22 @@ function resolveDizipal(url, activeUrl) {
         console.error(`${PROVIDER_TAG2} Sayfadan video config token'\u0131 (data-cfg) al\u0131namad\u0131!`);
         return null;
       }
-      let cookies = "";
-      if (typeof getResponse.headers.getSetCookie === "function") {
-        cookies = getResponse.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
-      } else {
-        const rawSetCookie = getResponse.headers.get("set-cookie");
-        if (rawSetCookie) {
-          cookies = rawSetCookie.split(/, (?=[A-Za-z0-9_]+=)/).map((c) => c.split(";")[0]).join("; ");
-        }
-      }
       console.log(`${PROVIDER_TAG2} Bulunan Token \xBB ${configToken}`);
-      console.log(`${PROVIDER_TAG2} Yakalanan \xC7erezler \xBB ${cookies}`);
-      const postData = new URLSearchParams();
-      postData.append("cfg", configToken);
-      const configResponse = yield fetch(`${siteUrl}/ajax-player-config`, {
-        method: "POST",
-        headers: {
-          "User-Agent": userAgent,
-          "Accept": "*/*",
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          "X-Requested-With": "XMLHttpRequest",
-          "Origin": siteUrl,
-          "Cookie": cookies,
-          "Referer": url
-        },
-        body: postData.toString()
-      });
-      const configResponseRaw = yield configResponse.text();
-      console.log(`${PROVIDER_TAG2} API Yan\u0131t\u0131 \xBB ${configResponseRaw}`);
-      const embedUrlMatch = configResponseRaw.match(/"v"\s*:\s*"([^"]+)"/);
-      let embedUrlRaw = embedUrlMatch ? embedUrlMatch[1].replace(/\\\//g, "/") : null;
+      let padded = configToken;
+      const padNeeded = (4 - configToken.length % 4) % 4;
+      for (let i = 0; i < padNeeded; i++)
+        padded += "=";
+      let decodedToken;
+      try {
+        decodedToken = atob(padded);
+      } catch (e) {
+        decodedToken = Buffer.from(padded, "base64").toString("utf-8");
+      }
+      console.log(`${PROVIDER_TAG2} Decoded Token \xBB ${decodedToken}`);
+      const embedUrlMatch = decodedToken.match(/"v"\s*:\s*"([^"]+)"/);
+      const embedUrlRaw = embedUrlMatch ? embedUrlMatch[1].replace(/\\\//g, "/") : null;
       if (!embedUrlRaw) {
-        console.error(`${PROVIDER_TAG2} Embed URL config'den al\u0131namad\u0131! D\xF6nen yan\u0131t: ${configResponseRaw}`);
+        console.error(`${PROVIDER_TAG2} Embed URL token i\xE7inden al\u0131namad\u0131! D\xF6nen yan\u0131t: ${decodedToken}`);
         return null;
       }
       const embedUrl = fixUrl(embedUrlRaw, siteUrl);
@@ -325,12 +309,12 @@ function resolveDizipal(url, activeUrl) {
           }
         });
         let sessionCookie = "";
-        let playerToken = "";
         if (typeof apiResponse.headers.getSetCookie === "function") {
           const setCookies = apiResponse.headers.getSetCookie();
           const tokenCookie = setCookies.find((c) => c.includes("fireplayer_player="));
           if (tokenCookie) {
-            playerToken = tokenCookie.split(";")[0].split("=")[1];
+            const playerToken = tokenCookie.split(";")[0].split("=")[1];
+            sessionCookie = `fireplayer_player=${playerToken}`;
           }
         } else {
           const rawSetCookie = apiResponse.headers.get("set-cookie");
@@ -338,9 +322,6 @@ function resolveDizipal(url, activeUrl) {
             const cleanCookie = rawSetCookie.split(";")[0];
             sessionCookie = `${cleanCookie};`;
           }
-        }
-        if (playerToken) {
-          sessionCookie = `fireplayer_player=${playerToken}`;
         }
         console.log(`${PROVIDER_TAG2} Yakalanan Cookie \xBB ${sessionCookie}`);
         const responseText = yield apiResponse.text();
@@ -520,49 +501,47 @@ function getEpisodeUrl(seriesUrl, season, episode, activeUrl) {
   return __async(this, null, function* () {
     try {
       const html = yield fetchText(seriesUrl);
-      const epNumPattern1 = new RegExp(`\\b${season}[.\\s]*[Ss]ezon[\\s.]*${episode}[.\\s]*[Bb][o\xF6]l[u\xFC]m\\b`, "i");
-      const epNumPattern2 = new RegExp(`\\b${season}x${episode}\\b`, "i");
-      const epBlockRegex = /<a[^>]+data-dizipal-pageloader[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/ig;
+      const epBlockRegex = /<a[^>]+class=["'][^"']*detail-episode-item[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>([\/\s\S]*?)<\/a>/ig;
       let m;
+      const seasonPadded = String(season);
+      const episodePadded = String(episode);
+      const subtitlePattern = new RegExp(`${seasonPadded}[^\\d]*[Ss]ezon[^\\d]*${episodePadded}[^\\d]*[Bb][o\xF6]l[u\xFC]m`, "i");
       while ((m = epBlockRegex.exec(html)) !== null) {
         const href = m[1];
         const content = m[2];
-        if (epNumPattern1.test(content) || epNumPattern2.test(content) || epNumPattern1.test(href) || epNumPattern2.test(href)) {
+        if (subtitlePattern.test(content) || subtitlePattern.test(href)) {
           const url = fixUrl(href, activeUrl);
-          console.log(`${PROVIDER_TAG3} B\xF6l\xFCm URL (DOM match): ${url}`);
+          console.log(`${PROVIDER_TAG3} B\xF6l\xFCm URL (detail-episode-item): ${url}`);
           return url;
         }
       }
-      const slugPattern = new RegExp(`href=["']([^"']+\\/bolum\\/[^"']*-?${season}x${episode}[^"']*)["']`, "i");
+      const slugPattern = new RegExp(`href=["']([^"']*-${season}-sezon-${episode}-bolum[^"']*)["']`, "i");
       const slugMatch = html.match(slugPattern);
       if (slugMatch) {
         const url = fixUrl(slugMatch[1], activeUrl);
         console.log(`${PROVIDER_TAG3} B\xF6l\xFCm URL (slug match): ${url}`);
         return url;
       }
-      const blocks = html.split('href="');
-      for (const block of blocks) {
-        if (block.includes("/bolum/")) {
-          if (epNumPattern1.test(block) || epNumPattern2.test(block)) {
-            const href = block.split('"')[0];
-            const url = fixUrl(href, activeUrl);
-            console.log(`${PROVIDER_TAG3} B\xF6l\xFCm URL (block split match): ${url}`);
-            return url;
-          }
+      const pageloaderRegex = /<a[^>]+data-dizipal-pageloader[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/ig;
+      const epNumPattern = new RegExp(`\\b${season}[.\\s]*[Ss]ezon[\\s.]*${episode}[.\\s]*[Bb][o\xF6]l[u\xFC]m\\b`, "i");
+      while ((m = pageloaderRegex.exec(html)) !== null) {
+        const href = m[1];
+        const content = m[2];
+        if (epNumPattern.test(content) || epNumPattern.test(href)) {
+          const url = fixUrl(href, activeUrl);
+          console.log(`${PROVIDER_TAG3} B\xF6l\xFCm URL (pageloader match): ${url}`);
+          return url;
         }
       }
       const seriesSlug = seriesUrl.split("/").filter(Boolean).pop();
       if (seriesSlug) {
-        const guessUrl1 = `${activeUrl}/bolum/${seriesSlug}-${season}-sezon-${episode}-bolum`;
-        const guessUrl2 = `${activeUrl}/bolum/${seriesSlug}-${season}x${episode}`;
-        for (const gUrl of [guessUrl1, guessUrl2]) {
-          console.log(`${PROVIDER_TAG3} URL tahmini: ${gUrl}`);
-          try {
-            const testRes = yield fetch(gUrl, { method: "HEAD", headers: HEADERS });
-            if (testRes.ok)
-              return gUrl;
-          } catch (_) {
-          }
+        const guessUrl = `${activeUrl}/bolum/${seriesSlug}-${season}-sezon-${episode}-bolum`;
+        console.log(`${PROVIDER_TAG3} URL tahmini: ${guessUrl}`);
+        try {
+          const testRes = yield fetch(guessUrl, { method: "HEAD", headers: HEADERS });
+          if (testRes.ok)
+            return guessUrl;
+        } catch (_) {
         }
       }
       console.warn(`${PROVIDER_TAG3} B\xF6l\xFCm URL bulunamad\u0131: S${season}E${episode}`);
