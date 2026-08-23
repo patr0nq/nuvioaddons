@@ -357,7 +357,8 @@
       "version": "1.0.0",
       "author": "patr0n",
       "supportedTypes": [
-        "movie"
+        "movie",
+        "tv"
       ],
       "filename": "providers/patronFullHDFilmizlesene.js",
       "enabled": true,
@@ -367,7 +368,9 @@
       ],
       "formats": [
         "m3u8",
-        "mp4"
+        "mp4",
+        "mkv",
+        "hls"
       ],
       "limited": false,
       "disabledPlatforms": [],
@@ -380,7 +383,8 @@
       "version": "1.0.0",
       "author": "patr0n",
       "supportedTypes": [
-        "movie"
+        "movie",
+        "tv"
       ],
       "filename": "providers/patronJetFilmizle.js",
       "enabled": true,
@@ -390,7 +394,9 @@
       ],
       "formats": [
         "m3u8",
-        "mp4"
+        "mp4",
+        "mkv",
+        "hls"
       ],
       "limited": false,
       "disabledPlatforms": [],
