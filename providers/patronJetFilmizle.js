@@ -1,6 +1,6 @@
 /**
  * patronJetFilmizle - Built from src/patronJetFilmizle/
- * Generated: 2026-08-23T16:55:01.499Z
+ * Generated: 2026-08-23T17:26:49.637Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -169,6 +169,54 @@ function getD2rsLink(iframeUrl) {
     return null;
   });
 }
+function getVideoparkLink(iframeUrl, referer) {
+  return __async(this, null, function* () {
+    try {
+      const response = yield fetch(iframeUrl, {
+        headers: __spreadProps(__spreadValues({}, HEADERS), { "Referer": referer })
+      });
+      if (!response.ok)
+        return null;
+      const html = yield response.text();
+      const workerUrlMatch = html.match(/(?:const|var|let)\s+WORKER_URL\s*=\s*['"]([^'"]+)['"]/);
+      const videoIdMatch = html.match(/(?:const|var|let)\s+VIDEO_ID\s*=\s*['"]([^'"]+)['"]/);
+      const pubIdMatch = html.match(/(?:const|var|let)\s+PUB_ID\s*=\s*['"]([^'"]+)['"]/);
+      const publMatch = html.match(/(?:const|var|let)\s+PUBLISHER_ID\s*=\s*['"]([^'"]+)['"]/);
+      const titleMatch = html.match(/(?:const|var|let)\s+VIDEO_TITLE\s*=\s*['"]([^'"]+)['"]/);
+      if (!workerUrlMatch)
+        return null;
+      const workerUrl = workerUrlMatch[1];
+      const videoId = videoIdMatch ? videoIdMatch[1] : "";
+      const pubId = pubIdMatch ? pubIdMatch[1] : "";
+      const publId = publMatch ? publMatch[1] : "";
+      const title = titleMatch ? titleMatch[1] : videoId;
+      let apiUrl = "";
+      if (pubId) {
+        apiUrl = `${workerUrl}/api/stream?pubId=${encodeURIComponent(pubId)}&title=${encodeURIComponent(title)}`;
+        if (publId)
+          apiUrl += `&publisherId=${encodeURIComponent(publId)}`;
+      } else if (videoId) {
+        apiUrl = `${workerUrl}/api/video?id=${encodeURIComponent(videoId)}`;
+      }
+      if (!apiUrl)
+        return null;
+      const apiRes = yield fetch(apiUrl, {
+        headers: __spreadProps(__spreadValues({}, HEADERS), { "Referer": referer })
+      });
+      if (!apiRes.ok)
+        return null;
+      const apiData = yield apiRes.json();
+      if (apiData.hlsSource && apiData.hlsSource.file) {
+        return { url: apiData.hlsSource.file, type: "hls" };
+      } else if (apiData.mp4Sources && apiData.mp4Sources.length > 0) {
+        return { url: apiData.mp4Sources[0].file, type: "mp4" };
+      }
+    } catch (e) {
+      console.warn(`${PROVIDER_TAG2} Videopark hatasi: ${e.message}`);
+    }
+    return null;
+  });
+}
 function getPixeldrainLink(pdUrl) {
   try {
     const pixelId = pdUrl.replace(/\/$/, "").split("/").pop();
@@ -327,6 +375,19 @@ function extractFromMoviePage(movieUrl) {
               url: pdData.url,
               quality: "Auto",
               headers: { "Referer": pdData.referer, "User-Agent": HEADERS["User-Agent"] }
+            });
+          }
+        } else if (iframeUrl.includes("videopark.top")) {
+          console.log(`${PROVIDER_TAG2} Videopark URL bulundu: ${iframeUrl}`);
+          const vpData = yield getVideoparkLink(iframeUrl, movieUrl);
+          if (vpData) {
+            streams.push({
+              name: "PatronJetFilmizle - Videopark",
+              title: `Videopark | ${typeLabel}`,
+              url: vpData.url,
+              quality: "Auto",
+              type: vpData.type,
+              headers: { "Referer": iframeUrl, "User-Agent": HEADERS["User-Agent"] }
             });
           }
         } else if (!iframeUrl.includes("youtube")) {
