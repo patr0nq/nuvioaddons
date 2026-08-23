@@ -1,6 +1,6 @@
 /**
  * patronFullHDFilmizlesene - Built from src/patronFullHDFilmizlesene/
- * Generated: 2026-08-23T17:02:42.753Z
+ * Generated: 2026-08-23T17:14:33.076Z
  */
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -461,46 +461,51 @@ function extractFromMoviePage(movieUrl) {
 }
 
 // src/patronFullHDFilmizlesene/tmdb.js
-var TMDB_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1YjMzYjg4NmYwZTM4MmQyNjJlMzAzNWJjMmFjN2Q2MiIsInN1YiI6IjY1MDBlZWZmYzVhYjFhMDBhYTRiNTkxNCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.A5VHhgPzc-3SFfG_qVRIY8n0CWivQdYMmKLLnvSEFLM";
+var TMDB_API_KEY = "500330721680edb6d5f7f12ba7cd9023";
+var PROVIDER_TAG2 = "[FullHDFilmizlesene]";
 function getTmdbTitle(tmdbId, mediaType) {
   return __async(this, null, function* () {
-    var _a, _b;
     try {
-      const url = `https://api.themoviedb.org/3/${mediaType === "movie" ? "movie" : "tv"}/${tmdbId}?language=tr-TR`;
-      const res = yield fetch(url, {
+      const type = mediaType === "movie" ? "movie" : "tv";
+      const url = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&language=tr-TR`;
+      const response = yield fetch(url, {
         headers: {
-          "Authorization": `Bearer ${TMDB_KEY}`,
           "Accept": "application/json"
         }
       });
-      if (!res.ok)
-        throw new Error(`TMDB HTTP ${res.status}`);
-      const data = yield res.json();
-      const trTitle = data.title || data.name || "";
-      const origTitle = data.original_title || data.original_name || "";
-      const year = ((_a = data.release_date) == null ? void 0 : _a.substring(0, 4)) || ((_b = data.first_air_date) == null ? void 0 : _b.substring(0, 4)) || "";
-      return { trTitle, origTitle, year };
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = yield response.json();
+      let trTitle = type === "movie" ? data.title : data.name;
+      let origTitle = type === "movie" ? data.original_title : data.original_name;
+      if (!trTitle)
+        trTitle = origTitle;
+      trTitle = (trTitle == null ? void 0 : trTitle.trim()) || "";
+      origTitle = (origTitle == null ? void 0 : origTitle.trim()) || "";
+      console.log(`${PROVIDER_TAG2} Ba\u015Fl\u0131k bulundu: ${trTitle}`);
+      return { trTitle, origTitle };
     } catch (e) {
-      console.error(`[FullHDFilmizlesene] TMDB hata: ${e.message}`);
-      return { trTitle: "", origTitle: "", year: "" };
+      console.warn(`${PROVIDER_TAG2} TMDB hatas\u0131: ${e.message}`);
+      return { trTitle: "", origTitle: "" };
     }
   });
 }
 
 // src/patronFullHDFilmizlesene/index.js
-var PROVIDER_TAG2 = "[FullHDFilmizlesene]";
+var PROVIDER_TAG3 = "[FullHDFilmizlesene]";
 function getStreams(tmdbId, mediaType, season, episode) {
   return __async(this, null, function* () {
     try {
       if (mediaType !== "movie") {
-        console.log(`${PROVIDER_TAG2} Yaln\u0131zca film destekleniyor.`);
+        console.log(`${PROVIDER_TAG3} Yaln\u0131zca film destekleniyor.`);
         return [];
       }
-      console.log(`${PROVIDER_TAG2} \u0130stek: TMDB ${tmdbId}`);
+      console.log(`${PROVIDER_TAG3} \u0130stek: TMDB ${tmdbId}`);
       const { trTitle, origTitle } = yield getTmdbTitle(tmdbId, mediaType);
-      console.log(`${PROVIDER_TAG2} Ba\u015Fl\u0131k: TR="${trTitle}" | Orig="${origTitle}"`);
+      console.log(`${PROVIDER_TAG3} Ba\u015Fl\u0131k: TR="${trTitle}" | Orig="${origTitle}"`);
       if (!trTitle && !origTitle) {
-        console.warn(`${PROVIDER_TAG2} Ba\u015Fl\u0131k bulunamad\u0131.`);
+        console.warn(`${PROVIDER_TAG3} Ba\u015Fl\u0131k bulunamad\u0131.`);
         return [];
       }
       let movieUrl = null;
@@ -511,16 +516,16 @@ function getStreams(tmdbId, mediaType, season, episode) {
         movieUrl = yield searchMovie(origTitle);
       }
       if (!movieUrl) {
-        console.warn(`${PROVIDER_TAG2} Film bulunamad\u0131: "${trTitle || origTitle}"`);
+        console.warn(`${PROVIDER_TAG3} Film bulunamad\u0131: "${trTitle || origTitle}"`);
         return [];
       }
-      console.log(`${PROVIDER_TAG2} Film sayfas\u0131: ${movieUrl}`);
+      console.log(`${PROVIDER_TAG3} Film sayfas\u0131: ${movieUrl}`);
       const allStreams = yield extractFromMoviePage(movieUrl);
       const streams = allStreams.filter((s) => !s.subtitle);
-      console.log(`${PROVIDER_TAG2} Toplam ${streams.length} stream bulundu.`);
+      console.log(`${PROVIDER_TAG3} Toplam ${streams.length} stream bulundu.`);
       return streams;
     } catch (e) {
-      console.error(`${PROVIDER_TAG2} Hata: ${e.message}`);
+      console.error(`${PROVIDER_TAG3} Hata: ${e.message}`);
       return [];
     }
   });
