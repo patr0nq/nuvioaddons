@@ -12,7 +12,7 @@
         "tv",
         "movie"
       ],
-      "filename": "patronAsyaAnimeleri.js",
+      "filename": "providers/patronAsyaAnimeleri.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=asyaanimeleri.top&sz=%size%",
       "contentLanguage": [
@@ -36,7 +36,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronFilmMakinesi.js",
+      "filename": "providers/patronFilmMakinesi.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=filmmakinesi.film&sz=%size%",
       "contentLanguage": [
@@ -60,7 +60,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronMulti.js",
+      "filename": "providers/patronMulti.js",
       "enabled": true,
       "logo": "",
       "contentLanguage": [
@@ -84,7 +84,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patrondortkhd.js",
+      "filename": "providers/patrondortkhd.js",
       "enabled": true,
       "logo": "",
       "contentLanguage": [
@@ -110,7 +110,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronhdfcehennemi.js",
+      "filename": "providers/patronhdfcehennemi.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=hdfilmcehennemi.com&sz=%size%",
       "contentLanguage": [
@@ -134,7 +134,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronSinewix.js",
+      "filename": "providers/patronSinewix.js",
       "enabled": true,
       "logo": "https://ydfvfdizipanel.ru/favicon.ico",
       "contentLanguage": [
@@ -159,7 +159,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronDizipal.js",
+      "filename": "providers/patronDizipal.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=dizipal2063.com&sz=64",
       "contentLanguage": [
@@ -184,7 +184,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronDiziyou.js",
+      "filename": "providers/patronDiziyou.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=diziyou.one&sz=64",
       "contentLanguage": [
@@ -210,7 +210,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronFullHDFilmizlesene.js",
+      "filename": "providers/patronFullHDFilmizlesene.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=fullhdfilmizlesene.now&sz=64",
       "contentLanguage": [
@@ -235,7 +235,7 @@
       "supportedTypes": [
         "movie"
       ],
-      "filename": "patronJetFilmizle.js",
+      "filename": "providers/patronJetFilmizle.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=jetfilmizle.com&sz=64",
       "contentLanguage": [
@@ -261,7 +261,7 @@
         "movie",
         "tv"
       ],
-      "filename": "patronSelcukFlix.js",
+      "filename": "providers/patronSelcukFlix.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=selcukflix.app&sz=64",
       "contentLanguage": [
