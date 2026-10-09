@@ -1,6 +1,6 @@
 {
   "name": "patr0n Nuvio Eklentileri",
-  "version": "2.0",
+  "version": "2.4",
   "scrapers": [
     {
       "id": "patron-asya-animeleri",
@@ -12,7 +12,7 @@
         "tv",
         "movie"
       ],
-      "filename": "providers/patronAsyaAnimeleri.js",
+      "filename": "patronAsyaAnimeleri.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=asyaanimeleri.top&sz=%size%",
       "contentLanguage": [
@@ -30,13 +30,13 @@
       "id": "patron-film-makinesi",
       "name": "PatronFilmMakinesi",
       "description": "FilmMakinesi.to uzerinden Turkce dublajli ve altyazili filmler. @patr0n tarafindan gelistirildi.",
-      "version": "1.0.1",
+      "version": "1.0.4",
       "author": "patr0n",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "providers/patronFilmMakinesi.js",
+      "filename": "patronFilmMakinesi.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=filmmakinesi.film&sz=%size%",
       "contentLanguage": [
@@ -60,7 +60,7 @@
         "movie",
         "tv"
       ],
-      "filename": "providers/patronMulti.js",
+      "filename": "patronMulti.js",
       "enabled": true,
       "logo": "",
       "contentLanguage": [
@@ -69,54 +69,6 @@
       ],
       "formats": [
         "m3u8"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
-    },
-    {
-      "id": "patron-666-film",
-      "name": "Patron666Film",
-      "description": "666filmizle.site uzerinden filmler. @patr0n tarafindan gelistirildi.",
-      "version": "1.0.0",
-      "author": "patr0n",
-      "supportedTypes": [
-        "movie"
-      ],
-      "filename": "providers/patron666Film.js",
-      "enabled": false,
-      "logo": "https://www.google.com/s2/favicons?domain=666filmizle.site&sz=%size%",
-      "contentLanguage": [
-        "tr"
-      ],
-      "formats": [
-        "mp4",
-        "m3u8"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
-    },
-    {
-      "id": "patron-hd-film-delisi",
-      "name": "PatronHDFilmDelisi",
-      "description": "hdfilmdelisi.one uzerinden filmler. @patr0n tarafindan gelistirildi.",
-      "version": "0.1.0",
-      "author": "patr0n",
-      "supportedTypes": [
-        "movie"
-      ],
-      "filename": "providers/patronHDFilmDelisi.js",
-      "enabled": false,
-      "logo": "https://www.google.com/s2/favicons?domain=hdfilmdelisi.one&sz=%size%",
-      "contentLanguage": [
-        "tr"
-      ],
-      "formats": [
-        "mp4",
-        "m3u8",
-        "hls",
-        "mkv"
       ],
       "limited": false,
       "disabledPlatforms": [],
@@ -132,7 +84,7 @@
         "movie",
         "tv"
       ],
-      "filename": "providers/patrondortkhd.js",
+      "filename": "patrondortkhd.js",
       "enabled": true,
       "logo": "",
       "contentLanguage": [
@@ -152,13 +104,13 @@
       "id": "patron-hdf-cehennemi",
       "name": "PatronHDFCehennemi",
       "description": "HDFilmCehennemi tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": "patr0n",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "providers/patronhdfcehennemi.js",
+      "filename": "patronhdfcehennemi.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=hdfilmcehennemi.com&sz=%size%",
       "contentLanguage": [
@@ -182,34 +134,9 @@
         "movie",
         "tv"
       ],
-      "filename": "providers/patronSinewix.js",
+      "filename": "patronSinewix.js",
       "enabled": true,
       "logo": "https://ydfvfdizipanel.ru/favicon.ico",
-      "contentLanguage": [
-        "tr"
-      ],
-      "formats": [
-        "m3u8",
-        "mp4",
-        "mkv"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
-    },
-    {
-      "id": "patron-setfilm",
-      "name": "patronSetFilmIzle",
-      "description": "SetFilmIzle tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
-      "version": "1.0.0",
-      "author": "patr0n",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/patronSetfilm.js",
-      "enabled": true,
-      "logo": "https://www.google.com/s2/favicons?domain=setfilmizle.uk&sz=64",
       "contentLanguage": [
         "tr"
       ],
@@ -226,13 +153,13 @@
       "id": "patron-dizipal",
       "name": "patronDizipal",
       "description": "Dizipal tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
-      "version": "4.0.0",
+      "version": "1.0.8",
       "author": "patr0n",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "providers/patronDizipal.js",
+      "filename": "patronDizipal.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=dizipal2063.com&sz=64",
       "contentLanguage": [
@@ -248,56 +175,6 @@
       "supportsExternalPlayer": true
     },
     {
-      "id": "patron-dizify",
-      "name": "patronDizify",
-      "description": "Dizify.org tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
-      "version": "1.1.0",
-      "author": "patr0n",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/patronDizify.js",
-      "enabled": true,
-      "logo": "https://www.google.com/s2/favicons?domain=dizify.org&sz=64",
-      "contentLanguage": [
-        "tr"
-      ],
-      "formats": [
-        "m3u8",
-        "mp4",
-        "mkv"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
-    },
-    {
-      "id": "patron-film-ekseni",
-      "name": "patronFilmEkseni",
-      "description": "FilmEkseni.cc tabanli film saglayicisi. @patr0n tarafindan gelistirildi.",
-      "version": "2.0.0",
-      "author": "patr0n",
-      "supportedTypes": [
-        "movie"
-      ],
-      "filename": "providers/patronFilmEkseni.js",
-      "enabled": true,
-      "logo": "https://www.google.com/s2/favicons?domain=filmekseni.cc&sz=64",
-      "contentLanguage": [
-        "tr"
-      ],
-      "formats": [
-        "m3u8",
-        "mp4",
-        "mkv",
-        "hls"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
-    },
-    {
       "id": "patron-diziyou",
       "name": "patronDiziyou",
       "description": "Diziyou tabanli dizi saglayicisi. @patr0n tarafindan gelistirildi.",
@@ -307,38 +184,11 @@
         "movie",
         "tv"
       ],
-      "filename": "providers/patronDiziyou.js",
+      "filename": "patronDiziyou.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=diziyou.one&sz=64",
       "contentLanguage": [
         "tr"
-      ],
-      "formats": [
-        "m3u8",
-        "mp4",
-        "mkv",
-        "hls"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
-    },
-    {
-      "id": "patron-sinemacx",
-      "name": "patronSinemacx",
-      "description": "Sinema.gg kaynaklı filmler,@patr0n tarafindan gelistirildi.",
-      "version": "1.0.0",
-      "author": "patr0n",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "filename": "providers/patronSinemacx.js",
-      "enabled": true,
-      "logo": "https://www.sinema.gg/wp-content/themes/sinemacx/favicon.ico",
-      "contentLanguage": [
-        "tr",
-        "en"
       ],
       "formats": [
         "m3u8",
@@ -360,7 +210,7 @@
         "movie",
         "tv"
       ],
-      "filename": "providers/patronFullHDFilmizlesene.js",
+      "filename": "patronFullHDFilmizlesene.js",
       "enabled": true,
       "logo": "https://www.google.com/s2/favicons?domain=fullhdfilmizlesene.now&sz=64",
       "contentLanguage": [
@@ -380,15 +230,40 @@
       "id": "patron-jet-filmizle",
       "name": "patronJetFilmizle",
       "description": "JetFilmizle.com üzerinden Türkçe dublajlı ve altyazılı filmler. @patr0n tarafından geliştirildi.",
+      "version": "1.0.1",
+      "author": "patr0n",
+      "supportedTypes": [
+        "movie"
+      ],
+      "filename": "patronJetFilmizle.js",
+      "enabled": true,
+      "logo": "https://www.google.com/s2/favicons?domain=jetfilmizle.com&sz=64",
+      "contentLanguage": [
+        "tr"
+      ],
+      "formats": [
+        "m3u8",
+        "mp4",
+        "mkv",
+        "hls"
+      ],
+      "limited": false,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": true
+    },
+    {
+      "id": "patron-selcukflix",
+      "name": "patronSelcukFlix",
+      "description": "SelcukFlix tabanlı film ve dizi sağlayıcısı. @patr0n tarafından geliştirildi.",
       "version": "1.0.0",
       "author": "patr0n",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "providers/patronJetFilmizle.js",
+      "filename": "patronSelcukFlix.js",
       "enabled": true,
-      "logo": "https://www.google.com/s2/favicons?domain=jetfilmizle.com&sz=64",
+      "logo": "https://www.google.com/s2/favicons?domain=selcukflix.app&sz=64",
       "contentLanguage": [
         "tr"
       ],

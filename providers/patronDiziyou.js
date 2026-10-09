@@ -1,6 +1,6 @@
 /**
  * patronDiziyou - Built from src/patronDiziyou/
- * Generated: 2026-06-18T22:06:59.939Z
+ * Generated: 2026-10-09T18:01:37.204Z
  */
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -246,7 +246,14 @@ function resolveDiziyou(epUrl, baseUrl) {
         console.error(`${PROVIDER_TAG} Item ID \xE7\u0131kar\u0131lamad\u0131 (src: ${iframeSrc})`);
         return [];
       }
-      const storageBase = baseUrl.replace("www.", "storage.");
+      let storageBase;
+      try {
+        const parsed = new URL(baseUrl);
+        const host = parsed.hostname.replace(/^www\./, "");
+        storageBase = `${parsed.protocol}//storage.${host}`;
+      } catch (_) {
+        storageBase = baseUrl.replace("www.", "storage.");
+      }
       let hasDub = false;
       let hasSub = false;
       if (html.match(/id=["']turkceDublaj["']/i))
@@ -308,23 +315,39 @@ function getStreams(tmdbId, type, season, episode) {
         });
         if (!html)
           continue;
-        const itemRegex = /<div id=["']searchelement["'][^>]*>[\s\S]*?<div class=["']search-cat-img["']>[\s\S]*?<\/div>\s*<a href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/ig;
-        let m;
-        while ((m = itemRegex.exec(html)) !== null) {
-          const href = m[1];
-          const title = m[2];
-          const normalize = (str) => (str || "").toLowerCase().replace(/[^a-z0-9ğüşıöç]/g, "");
-          const rTitle = normalize(title);
-          const cleanTr = normalize(trTitle);
-          const cleanOrig = normalize(origTitle);
-          const cleanSh = normalize(shortTitle);
-          const cleanQ = normalize(query);
-          const titleMatches = rTitle === cleanTr || rTitle === cleanOrig || rTitle === cleanSh || rTitle === cleanQ || rTitle.includes(cleanQ) || cleanQ.includes(rTitle);
-          if (titleMatches) {
-            console.log(`${PROVIDER_TAG} E\u015Fle\u015Fme: "${title}" -> ${href}`);
-            matchUrl = fixUrl(href, baseUrl);
-            break;
+        const patterns = [
+          // Format 1: <div id='searchelement'> icinde <a href>
+          /<div[^>]+id=["']searchelement["'][^>]*>[\s\S]*?<div[^>]+class=["']search-cat-img["'][^>]*>[\s\S]*?<\/div>\s*<a href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/ig,
+          // Format 2: search class'li <a> elemani
+          /<a[^>]+href=["']([^"']+)["'][^>]*class=["'][^"']*search[^"']*["'][^>]*>([^<]+)<\/a>/ig,
+          // Format 3: li ya da div icerisindeki herhangi bir <a> + metin
+          /<(?:li|div)[^>]*>[\s\S]*?<a[^>]+href=["'](https?:\/\/[^"']+)["'][^>]*>[\s\S]*?<(?:span|h[1-6]|p|div)[^>]*>([^<]+)<\/(?:span|h[1-6]|p|div)>/ig
+        ];
+        let found = false;
+        for (const pat of patterns) {
+          pat.lastIndex = 0;
+          let m;
+          while ((m = pat.exec(html)) !== null) {
+            const href = m[1];
+            const title = m[2] ? m[2].trim() : "";
+            if (!href || !title)
+              continue;
+            const normalize = (str) => (str || "").toLowerCase().replace(/[^a-z0-9ğüşıöç]/g, "");
+            const rTitle = normalize(title);
+            const cleanTr = normalize(trTitle);
+            const cleanOrig = normalize(origTitle);
+            const cleanSh = normalize(shortTitle);
+            const cleanQ = normalize(query);
+            const titleMatches = rTitle === cleanTr || rTitle === cleanOrig || rTitle === cleanSh || rTitle === cleanQ || rTitle.includes(cleanQ) || cleanQ.includes(rTitle);
+            if (titleMatches) {
+              console.log(`${PROVIDER_TAG} E\u015Fle\u015Fme: "${title}" -> ${href}`);
+              matchUrl = fixUrl(href, baseUrl);
+              found = true;
+              break;
+            }
           }
+          if (found)
+            break;
         }
         if (matchUrl)
           break;
@@ -337,14 +360,34 @@ function getStreams(tmdbId, type, season, episode) {
       if (type === "tv") {
         console.log(`${PROVIDER_TAG} Dizi sayfas\u0131 inceleniyor: ${matchUrl}`);
         const seriesHtml = yield fetchText(matchUrl);
-        const epPattern = new RegExp(`href=["']([^"']+-${season}-sezon-${episode}-bolum\\/?)[^"']*["']`, "i");
+        const epPattern = new RegExp(`href=["']([^"']+-${season}-sezon-${episode}-bolum[^"']*)["']`, "i");
         const epMatch = seriesHtml.match(epPattern);
+        const epPattern2 = new RegExp(`href=["']([^"']*/sezon-${season}/bolum-${episode}[/"'][^"']*)["']`, "i");
+        const epMatch2 = seriesHtml.match(epPattern2);
         if (epMatch) {
           targetUrl = fixUrl(epMatch[1], baseUrl);
-          console.log(`${PROVIDER_TAG} B\xF6l\xFCm URL (Regex): ${targetUrl}`);
+          console.log(`${PROVIDER_TAG} B\xF6l\xFCm URL (Regex-1): ${targetUrl}`);
+        } else if (epMatch2) {
+          targetUrl = fixUrl(epMatch2[1], baseUrl);
+          console.log(`${PROVIDER_TAG} B\xF6l\xFCm URL (Regex-2): ${targetUrl}`);
         } else {
-          let slug = matchUrl.replace(/\/$/, "").split("/").pop();
-          targetUrl = `${baseUrl}/${slug}-${season}-sezon-${episode}-bolum/`;
+          const slug = matchUrl.replace(/\/$/, "").split("/").pop();
+          const candidates = [
+            `${baseUrl}/${slug}-${season}-sezon-${episode}-bolum/`,
+            `${baseUrl}/dizi/${slug}/${season}-sezon-${episode}-bolum/`,
+            `${baseUrl}/${slug}/sezon-${season}/bolum-${episode}/`
+          ];
+          targetUrl = candidates[0];
+          for (const c of candidates) {
+            try {
+              const r = yield fetch(c, { method: "HEAD" });
+              if (r.status < 400) {
+                targetUrl = c;
+                break;
+              }
+            } catch (_) {
+            }
+          }
           console.log(`${PROVIDER_TAG} B\xF6l\xFCm URL (Tahmin): ${targetUrl}`);
         }
       }
