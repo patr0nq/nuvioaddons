@@ -153,7 +153,7 @@
       "id": "patron-dizipal",
       "name": "patronDizipal",
       "description": "Dizipal tabanli film ve dizi saglayicisi. @patr0n tarafindan gelistirildi.",
-      "version": "1.0.8",
+      "version": "1.0.10",
       "author": "patr0n",
       "supportedTypes": [
         "movie",
